@@ -32,7 +32,7 @@ Hermes speaks MCP natively, so it can connect to Wave OS without a plugin. Creat
 ```yaml
 mcp_servers:
   wave-os:
-    url: https://wave-mcp.up.railway.app/mcp
+    url: https://wave-mcp-proxy-production.up.railway.app/mcp
     headers:
       Authorization: "Bearer ${env:WAVE_MCP_TOKEN}"
 ```
