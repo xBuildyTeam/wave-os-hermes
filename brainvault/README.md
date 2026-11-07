@@ -21,6 +21,18 @@ hermes config set memory.provider brainvault
 hermes memory status                              # brainvault ← active
 ```
 
+**Windows (PowerShell):** Hermes keeps its files in `%LOCALAPPDATA%\hermes`, not `~/.hermes`, so copy the plugin there:
+
+```powershell
+git clone https://github.com/xBuildyTeam/wave-os-hermes
+New-Item -ItemType Directory -Force "$env:LOCALAPPDATA\hermes\plugins" | Out-Null
+Copy-Item -Recurse -Force wave-os-hermes\brainvault "$env:LOCALAPPDATA\hermes\plugins\brainvault"
+hermes config set memory.provider brainvault
+hermes memory status
+```
+
+Not sure where your Hermes lives? `hermes config set` prints the path of its config.yaml, and the plugins folder sits next to it.
+
 There are no extra Python packages to install: it uses `cryptography` (already a Hermes dependency) and the standard library. If `keyring` is installed, the agent key goes in your OS keychain. Otherwise it goes in a `0600` file.
 
 ## Use
