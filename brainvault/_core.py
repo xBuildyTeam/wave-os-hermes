@@ -9,6 +9,7 @@ Everything lives in <hermes_home>/brainvault/:
 from __future__ import annotations
 
 import json
+import base64
 import os
 import re
 import time
@@ -18,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -32,6 +33,10 @@ _KEYRING_SERVICE = "hermes-brainvault"
 
 class VaultError(RuntimeError):
     pass
+
+
+def _b64u(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).rstrip(b"=").decode()
 
 
 def _now_iso() -> str:
@@ -165,6 +170,7 @@ class Vault:
         key = _pv1.private_key_from_hex(agent_hex)
         agent = drop.get("agent") or {}
         pub = _pv1.public_key_hex(key)
+        self.cfg = {**DEFAULTS, **self._read_cfg()}  # pairing can finish later; keep settings changed meanwhile
         if agent.get("publicKey") and agent["publicKey"].lower() != pub.lower():
             raise VaultError("The key doesn't match the agent the wallet described. Not saved.")
         self.cfg["agent"] = {"id": str(agent.get("id", "")), "label": str(agent.get("label", "Hermes"))[:40],
@@ -231,7 +237,7 @@ class Vault:
             self.store.remove_memory(body=id_or_text)
 
     # -- hand-off to Wave Web --
-    def export_pack(self, *, include_exported: bool = False) -> dict:
+    def export_pack(self, *, include_exported: bool = False, to_file: bool = False) -> dict:
         states = ("local", "exported") if include_exported else ("local",)
         mems = [m for m in self.store.memories(states=states) if m["trust"] != "external"]
         if not mems:
@@ -249,14 +255,37 @@ class Vault:
                                      "trust": m["trust"]}})
         agent = self.cfg.get("agent") or {}
         pack = {"format": "wave-migration/1", "source": "hermes", "private": all(c["private"] for c in cards),
-                "recipient": f"agent:{agent['id']}" if agent.get("id") else "self", "cards": cards}
+                "recipient": f"agent:{agent['id']}" if agent.get("id") else "self",
+                "agent": {"id": agent.get("id", ""), "label": agent.get("label", "")} if agent.get("id") else None,
+                "cards": cards}
+        out = {"cards": len(cards), "skipped": len(skipped), "private": sum(1 for c in cards if c["private"])}
+        if not to_file:
+            try:
+                out.update(self._drop_pack(pack))
+                self.store.mark_exported([c["source"]["originalId"] for c in cards])
+                return out
+            except (_wave.WaveError, VaultError) as e:
+                out["drop_error"] = str(e)  # fall back to a file
         out_dir = self.home / "exports"
         out_dir.mkdir(exist_ok=True)
         path = out_dir / f"wave-migration-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
         path.write_text(json.dumps(pack, indent=1, ensure_ascii=False))
         self.store.mark_exported([c["source"]["originalId"] for c in cards])
-        return {"path": str(path), "cards": len(cards), "skipped": len(skipped),
-                "import_url": f"{self.cfg['wave_web']}/build/migration/new"}
+        out.update({"path": str(path), "review_url": f"{self.cfg['wave_web']}/build/migration/new?source=hermes"})
+        return out
+
+    def _drop_pack(self, pack: dict) -> dict:
+        """Encrypt the pack (AES-256-GCM, fresh key) into a one-time Wave Web drop. Only the link holds the key."""
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        raw = json.dumps(pack, ensure_ascii=False, separators=(",", ":")).encode()
+        key, iv = os.urandom(32), os.urandom(12)
+        box = "AG1." + _b64u(iv + AESGCM(key).encrypt(iv, raw, None))
+        if len(box) > 64 * 1024:
+            raise VaultError("Too many memories for one link. Send fewer at a time.")
+        code = _wave.new_pair_code()
+        _wave.drop_put(code, box, kind="cards", base=self.cfg["wave_web"])
+        return {"review_url": _wave.card_review_url(code, _b64u(key), base=self.cfg["wave_web"]),
+                "expires_minutes": 10}
 
     # -- recall from the vault --
     def _agent_rid(self) -> str | None:

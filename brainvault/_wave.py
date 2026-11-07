@@ -64,6 +64,19 @@ def pair_url(code: str, pk: str, *, base: str = WAVE_WEB) -> str:
     return f"{base}/hermes/pair?{urllib.parse.urlencode({'code': code, 'pk': pk})}"
 
 
+def drop_put(code: str, box: str, *, kind: str = "cards", agent: dict | None = None, base: str = WAVE_WEB) -> dict:
+    """Store a one-time box on Wave Web's agentDrop (10 min, single read)."""
+    body = {"action": "put", "code": code, "box": box, "kind": kind}
+    if agent:
+        body["agent"] = agent
+    return _post(base, "/functions/agentDrop", body)
+
+
+def card_review_url(code: str, key_b64: str, *, base: str = WAVE_WEB) -> str:
+    # The key rides in the URL fragment, so it never reaches Wave's servers or logs.
+    return f"{base}/build/card?{urllib.parse.urlencode({'drop': code})}#k={key_b64}"
+
+
 def drop_take(code: str, *, base: str = WAVE_WEB) -> dict | None:
     """One read of the pairing drop. None = nothing there yet (or expired)."""
     try:

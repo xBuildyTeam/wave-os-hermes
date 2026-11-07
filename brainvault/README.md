@@ -37,15 +37,19 @@ There are no extra Python packages to install: it uses `cryptography` (already a
 
 ## Use
 
-| | |
-|---|---|
-| `hermes brainvault wallet 0x…` | Your Wave Wallet Mint address (to find your vault cards) |
-| `hermes brainvault pair` | Opens Wave Web › Pair Hermes. Approve in Wave Wallet Mint and the agent key arrives end-to-end encrypted. |
-| `hermes brainvault sync` | Read new cards from your vault (also runs in the background every 10 min) |
-| `hermes brainvault export` | Write new memories to a Wave migration file and open Wave Web to review and mint them |
-| `hermes brainvault search …`, `list`, `forget <id>`, `status`, `unpair` | |
+**Everything works from the Hermes chat.** Just ask: *"pair BrainVault with my wallet"*, *"my wallet is 0x…"*, *"send my memories to Wave"*, *"sync my vault"*. Or use the slash command:
 
-Tools the agent gets: `brainvault_recall`, `brainvault_remember`, `brainvault_forget`, `brainvault_status`, `brainvault_send_to_wave`. Hermes's built-in memory writes (MEMORY.md / USER.md) are mirrored automatically, with provenance (operator, agent or external trust, session, date). Only the primary agent writes; subagents and cron runs can recall but never save.
+| In chat | What it does |
+|---|---|
+| `/brainvault status` | Wallet, pairing and memory counts |
+| `/brainvault wallet 0x…` | Your Wave Wallet Mint address (to find your vault cards) |
+| `/brainvault pair` | Opens Wave Web › Pair Hermes. Approve in Wave Wallet Mint, and the agent key arrives end-to-end encrypted. Finishes in the background. |
+| `/brainvault send` | Opens a **one-time review page** in Wave Web with your new memories already filled in. Check them, keep "Readable by: Me + Hermes", and mint with Wave Wallet Mint. The link works once, for 10 minutes, and its key never reaches Wave's servers. |
+| `/brainvault sync` | Read new cards from your vault now (also runs every 10 min) |
+
+The same commands work in a terminal as `hermes brainvault status|wallet|pair|sync|export|search|list|forget|unpair`. `export --file` writes a migration file instead of a link.
+
+Tools the agent gets: `brainvault_recall`, `brainvault_remember`, `brainvault_forget`, `brainvault_status`, `brainvault_send_to_wave`, `brainvault_set_wallet`, `brainvault_pair`, `brainvault_sync`. Hermes's built-in memory writes (MEMORY.md / USER.md) are mirrored automatically, with provenance (operator, agent or external trust, session, date). Only the primary agent writes; subagents and cron runs can recall but never save.
 
 ## How the memory loop works
 

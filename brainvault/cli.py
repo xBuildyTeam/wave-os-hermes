@@ -28,6 +28,7 @@ def register_cli(sub) -> None:
     f.add_argument("id")
     e = sp.add_parser("export", help="Write new memories to a Wave migration file")
     e.add_argument("--all", action="store_true", help="Include memories already exported")
+    e.add_argument("--file", action="store_true", help="Write a migration file instead of a one-time review link")
     e.add_argument("--no-browser", action="store_true")
 
 
@@ -66,11 +67,17 @@ def brainvault_command(args) -> int:
         elif cmd == "forget":
             print("Removed." if v.forget(args.id) else "No such memory.")
         elif cmd == "export":
-            r = v.export_pack(include_exported=args.all)
-            print(f"{r['cards']} cards → {r['path']}")
-            print(f"Import in Wave Web: {r['import_url']}  (choose Paste, paste the file, review, Publish with Wave Wallet Mint)")
+            r = v.export_pack(include_exported=args.all, to_file=args.file)
+            if "path" in r:
+                if r.get("drop_error"):
+                    print(f"Couldn't make a review link ({r['drop_error']}), so the cards went to a file instead.")
+                print(f"{r['cards']} cards → {r['path']}")
+                print(f"In Wave Web choose Paste, paste the file, review, then mint with Wave Wallet Mint: {r['review_url']}")
+            else:
+                print(f"{r['cards']} cards ready to review ({r['private']} private). The link works once, for 10 minutes:\n")
+                print("  " + r["review_url"] + "\n")
             if not args.no_browser:
-                webbrowser.open(r["import_url"])
+                webbrowser.open(r["review_url"])
         return 0
     except VaultError as e:
         print(f"brainvault: {e}", file=sys.stderr)

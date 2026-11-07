@@ -120,16 +120,79 @@ def test_size_limits(vault):
 def test_export_pack_matches_wave_import(vault):
     vault.remember("Wave Web is at web.oswave.io", tags=["wave"])
     vault.remember("Agent-suggested fact", trust="external")  # external never exported
-    r = vault.export_pack()
+    r = vault.export_pack(to_file=True)
     pack = json.loads(Path(r["path"]).read_text())
     assert r["cards"] == 1 and pack["private"] is True and pack["recipient"] == "self"
     c = pack["cards"][0]
     assert set(c) >= {"title", "tags", "body", "source"} and c["source"]["platform"] == "hermes"
     assert "(from Hermes · agent ·" in c["body"]
     with pytest.raises(VaultError):
-        vault.export_pack()  # nothing new
+        vault.export_pack(to_file=True)  # nothing new
     assert vault.store.memories()[-1]["state"] == "exported" or vault.store.memories()[0]["state"] == "exported"
 
+
+
+def _open_review_link(url, box):
+    """What Wave Web's /build/card page does: key from the #fragment, AES-GCM open in the browser."""
+    import base64
+    from urllib.parse import urlparse, parse_qs
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    u = urlparse(url)
+    b64 = lambda s: base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
+    key = b64(u.fragment.split("k=", 1)[1])
+    raw = b64(box[4:])
+    return parse_qs(u.query)["drop"][0], json.loads(AESGCM(key).decrypt(raw[:12], raw[12:], None))
+
+
+def test_export_makes_one_time_review_link(vault, monkeypatch):
+    sent = {}
+    monkeypatch.setattr(_wave, "drop_put", lambda code, box, **kw: sent.update(code=code, box=box, **kw) or {"ok": True})
+    vault.cfg["agent"] = {"id": "a1", "label": "Hermes on this computer"}
+    vault.remember("The demo is due November 11", tags=["hackathon"])
+    vault.remember("Wave Web is public knowledge", private=False)
+    r = vault.export_pack()
+    assert "path" not in r and r["cards"] == 2 and r["private"] == 1 and r["expires_minutes"] == 10
+    assert r["review_url"].startswith("https://web.oswave.io/build/card?drop=") and "#k=" in r["review_url"]
+    assert sent["kind"] == "cards" and sent["box"].startswith("AG1.")
+    assert "November" not in sent["box"] and sent["code"] not in r["review_url"].split("#")[1]
+    code, pack = _open_review_link(r["review_url"], sent["box"])
+    assert code == sent["code"]
+    assert pack["recipient"] == "agent:a1" and pack["agent"]["label"] == "Hermes on this computer"
+    assert {c["private"] for c in pack["cards"]} == {True, False}
+    assert all(m["state"] == "exported" for m in vault.store.memories())
+
+
+def test_export_falls_back_to_file(vault, monkeypatch):
+    def down(*a, **k):
+        raise _wave.WaveError("Can't reach Wave Web")
+    monkeypatch.setattr(_wave, "drop_put", down)
+    vault.remember("Fallback fact")
+    r = vault.export_pack()
+    assert Path(r["path"]).exists() and r["drop_error"] and r["review_url"].endswith("/build/migration/new?source=hermes")
+
+
+def test_chat_tools_and_slash(tmp_path, monkeypatch):
+    monkeypatch.setattr("brainvault._open", lambda url: True)
+    monkeypatch.setattr(_wave, "drop_put", lambda *a, **k: {"ok": True})
+    p = BrainVaultMemoryProvider()
+    p.initialize("sess", hermes_home=str(tmp_path), platform="cli", agent_context="primary")
+    names = {t["name"] for t in p.get_tool_schemas()}
+    assert {"brainvault_pair", "brainvault_sync", "brainvault_set_wallet", "brainvault_send_to_wave"} <= names
+    assert json.loads(p.slash("wallet " + EDDIE))["wallet"] == EDDIE
+    p.handle_tool_call("brainvault_remember", {"text": "Slash command fact"})
+    out = json.loads(p.slash("send"))
+    assert out["opened"] and "#k=" in out["link"]
+    assert "Usage" in p.slash("bogus")
+    # pairing runs in the background and reports through status
+    monkeypatch.setattr(Vault, "pair_wait", lambda self, pend, **kw: {"agent": {"label": "Hermes test"}, "key_store": "file"})
+    started = json.loads(p.handle_tool_call("brainvault_pair", {}))
+    assert started["pairing"] == "started" and "/hermes/pair?" in started["url"]
+    p._pair_thread.join(5)
+    assert json.loads(p.slash("status"))["last_pairing"] == {"paired": True, "agent": "Hermes test", "key_store": "file"}
+    sub = BrainVaultMemoryProvider()
+    sub.initialize("s2", hermes_home=str(tmp_path), platform="cli", agent_context="subagent")
+    assert "error" in json.loads(sub.handle_tool_call("brainvault_send_to_wave", {}))
+    sub.shutdown(); p.shutdown()
 
 # -- pairing (the wallet side is simulated with the wallet's own test vectors) --
 def test_pairing_flow(vault, monkeypatch):
