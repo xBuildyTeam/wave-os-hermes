@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.5.3"
+VERSION = "0.5.4"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -482,7 +482,8 @@ class Vault:
             t = (t or "").split("\n\n(from Hermes")[0]
             keep = [ln for ln in t.splitlines()
                     if not re.match(r"^\s*(CARD|TITLE|TOPICS?|TAGS?|SOURCE)\s*:", ln, re.I)
-                    and not re.match(r"^\s*(#[\w-]+\s*)+$", ln)]
+                    and not re.match(r"^\s*(#[\w-]+\s*)+$", ln)
+                    and not re.match(r"^\s*#{1,6}\s+\S", ln)]  # a Markdown title line Wave Web may add
             return re.sub(r"\s+", " ", " ".join(keep)).strip().lower()
         mems = self.store.memories(states=("local", "exported"))
         if not mems:

@@ -373,3 +373,13 @@ def test_reconcile_marks_minted_even_with_wave_web_extras(vault):
     assert vault.reconcile() == 1
     assert vault.store.memory(r["id"])["state"] == "minted"
     assert vault.reconcile() == 0
+
+
+def test_reconcile_with_markdown_title(vault):
+    r = vault.remember("The Wave hackathon demo is due November 11 at 5 PM EST.", title="Wave hackathon demo deadline")
+    vault.store.mark_exported([r["id"]])
+    vault.store.upsert_card({"ref": "v3:326", "id": 326, "creator": "0x" + "1" * 40, "isPrivate": True, "recipientId": None,
+                             "tags": ["user:memory"], "contentHash": "0x00", "block": 1,
+                             "plain": "# Wave hackathon demo deadline\n\nThe Wave hackathon demo is due November 11 at 5 PM EST.\n\n(from Hermes · agent · 2026-11-07)\n\n#hackathon #deadline",
+                             "opened": True, "sha_ok": True})
+    assert vault.reconcile() == 1 and vault.store.memory(r["id"])["state"] == "minted"
