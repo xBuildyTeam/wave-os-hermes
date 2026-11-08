@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.4.2"
+VERSION = "0.4.3"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -121,6 +121,10 @@ class Vault:
         self.cfg_path = self.home / "config.json"
         self.cfg = {**DEFAULTS, **self._read_cfg()}
         self.store = Store(self.home / "brainvault.db")
+        try:  # drop bot/design cards an older version synced in, so they never show up as memories
+            self.store.prune_public_cards(MEMORY_TAGS)
+        except Exception:
+            pass
         self.rpc = rpc or _chain.Rpc()
         self._key = None
 

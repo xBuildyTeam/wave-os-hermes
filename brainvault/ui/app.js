@@ -40,6 +40,10 @@ function createWaveBrainVault(env) {
     plus: function () { return I(["M12 5v14", "M5 12h14"]); },
     shield: function () { return I(["M12 2l8 4v6c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6z"], 14); },
     x: function () { return I(["M18 6L6 18", "M6 6l12 12"], 14); },
+    sun: function () { return I(["M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8", "M12 2v2", "M12 20v2", "M4.9 4.9l1.4 1.4", "M17.7 17.7l1.4 1.4", "M2 12h2", "M20 12h2", "M4.9 19.1l1.4-1.4", "M17.7 6.3l1.4-1.4"], 16); },
+    moon: function () { return I(["M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"], 16); },
+    info: function () { return I(["M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20", "M12 16v-4", "M12 8h.01"]); },
+    back: function () { return I(["M19 12H5", "M12 19l-7-7 7-7"]); },
   };
   // The Wave Wallet Mint leaf (same artwork as the wallet's icon and MINT badge).
   function Leaf(size, idp) {
@@ -115,7 +119,7 @@ function createWaveBrainVault(env) {
       waiting ? h("div", { style: { display: "flex", gap: 8, alignItems: "center" } }, h("div", { className: "bv-spin" }),
           h(Link, { className: "bv-btn", href: p.url }, ic.link(), "Open pairing page"))
         : h("button", { className: "bv-btn pri", onClick: props.onPair, disabled: props.busy }, ic.link(), "Pair with Wave Wallet Mint"),
-      p.state === "failed" ? h("div", { style: { width: "100%", color: "#ff9a9a" } }, p.error) : null);
+      p.state === "failed" ? h("div", { style: { width: "100%", color: "var(--bv-red)" } }, p.error) : null);
   }
 
   function WalletBanner(props) {
@@ -191,7 +195,7 @@ function createWaveBrainVault(env) {
           h("span", { className: "bv-st " + m.state }, STATE_LABEL[m.state] || m.state));
       }) : h("div", { className: "bv-empty" }, mems.length ? "Nothing matches." : "No memories yet. Chat with Hermes, or teach it something above.")),
       h("div", { className: "bv-sendbar" },
-        h("span", { style: { color: "var(--bv-dim)", fontSize: 12 } }, ids.length ? plural(ids.length, "memory") + " selected" : localCount ? plural(localCount, "new memory") + " ready for Wave" : "Everything is sent"),
+        h("span", { style: { color: "var(--bv-ink)", fontSize: 12 } }, ids.length ? plural(ids.length, "memory") + " selected" : localCount ? plural(localCount, "new memory") + " ready for Wave" : "Everything is sent"),
         h("div", { className: "bv-sp" }),
         ids.length ? h("button", { className: "bv-btn sm ghost", onClick: function () { setSel({}); } }, "Clear") : null,
         h("button", { className: "bv-btn pri sm", disabled: props.busy || (!ids.length && !localCount),
@@ -221,7 +225,7 @@ function createWaveBrainVault(env) {
                 h("span", { className: "bv-src " + (r.where === "vault" ? "vault" : "local") }, r.where === "vault" ? "VAULT" : "LOCAL"),
                 r.ref ? h(Link, { className: "bv-ref", href: props.waveWeb + "/card/" + r.ref }, r.ref) : null,
                 r.private ? h("span", null, ic.lock(), " private") : h("span", null, ic.globe(), " public"),
-                r.where === "vault" ? h("span", { style: { color: "var(--bv-mint)" } }, ic.shield(), " fingerprint verified") : null,
+                r.where === "vault" ? h("span", { style: { color: "var(--bv-mint-ink)" } }, ic.shield(), " fingerprint verified") : null,
                 h("div", { className: "bv-sp" }), h("span", null, "score " + r.score)),
               h("div", { style: { whiteSpace: "pre-wrap", wordBreak: "break-word" } },
                 r.title && r.where !== "vault" && r.text.indexOf(r.title.replace(/\u2026$/, "")) !== 0 ? h("b", null, r.title + "\n") : null, r.text));
@@ -241,7 +245,7 @@ function createWaveBrainVault(env) {
           h("div", { style: { flex: 1, minWidth: 0 } },
             h("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
               h(Link, { className: "bv-ref", href: props.waveWeb + "/card/" + c.ref }, c.ref),
-              c.sha_ok ? h("span", { style: { color: "var(--bv-mint)", fontSize: 11.5 } }, ic.check(), " verified") : h("span", { style: { color: "#ff9a9a", fontSize: 11.5 } }, "hash failed"),
+              c.sha_ok ? h("span", { style: { color: "var(--bv-mint-ink)", fontSize: 11.5 } }, ic.check(), " verified") : h("span", { style: { color: "var(--bv-red)", fontSize: 11.5 } }, "hash failed"),
               c.private ? h("span", { style: { color: "var(--bv-dim)", fontSize: 11.5 } }, c.opened ? "opened with agent key" : "not readable by this Hermes") : null,
               c.superseded_by ? h("span", { className: "bv-tag" }, "replaced by " + c.superseded_by) : null),
             h("div", { style: { color: c.readable ? "var(--bv-ink)" : "var(--bv-dim)", fontSize: 12.5, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } },
@@ -267,6 +271,65 @@ function createWaveBrainVault(env) {
       })));
   }
 
+  // Light / dark, like Wave Web's sun-moon toggle. Follows Hermes until the user picks one.
+  var THEME_KEY = "wave.brainvault.theme";
+  function hostTheme() {
+    var m = document.documentElement.getAttribute("data-hermes-mode");
+    if (m === "light" || m === "dark") return m;
+    if (document.documentElement.classList.contains("dark")) return "dark";
+    return "dark"; // the classic Hermes dashboard is dark
+  }
+  function useTheme() {
+    var saved = null;
+    try { saved = window.localStorage.getItem(THEME_KEY); } catch (_) {}
+    var _a = useState(saved === "light" || saved === "dark" ? saved : null), pick = _a[0], setPick = _a[1];
+    var _b = useState(hostTheme()), host = _b[0], setHost = _b[1];
+    useEffect(function () {
+      var mo = new MutationObserver(function () { setHost(hostTheme()); });
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-hermes-mode", "class"] });
+      return function () { mo.disconnect(); };
+    }, []);
+    var theme = pick || host;
+    function toggle() {
+      var next = theme === "dark" ? "light" : "dark";
+      setPick(next);
+      try { window.localStorage.setItem(THEME_KEY, next); } catch (_) {}
+    }
+    return [theme, toggle];
+  }
+  function ThemeToggle(props) {
+    var dark = props.theme === "dark";
+    return h("button", { className: "bv-btn bv-icon-btn", onClick: props.onToggle, title: dark ? "Switch to light mode" : "Switch to dark mode",
+      "aria-label": dark ? "Switch to light mode" : "Switch to dark mode" }, dark ? ic.sun() : ic.moon());
+  }
+
+  var ABOUT = [
+    { k: "The platform", t: "Wave OS", d: "A decentralized cloud OS: apps, bots and AI that run on Theta EdgeCloud and pay their way in Wave credits. Your identity and memory belong to your wallet, not to a server.",
+      links: [["oswave.io", "https://oswave.io"], ["Open Wave OS", "https://app.oswave.io"]] },
+    { k: "The web app", t: "Wave Web", d: "Where you create and review cards, build bots, and mint with Wave Wallet Mint. When Hermes sends you memories, they open here, ready to review.",
+      links: [["web.oswave.io", "https://web.oswave.io"]] },
+    { k: "This plugin", t: "Wave | BrainVault Mint", d: "Hermes remembers on this computer right away. You mint the memories worth keeping to your own vault on Theta, private ones encrypted to you and this Hermes, and any paired Hermes reads them back.",
+      links: [["GitHub", "https://github.com/xBuildyTeam/wave-os-hermes"], ["oswave.io/hermes", "https://oswave.io/hermes"]] },
+    { k: "Your keys", t: "Wave Wallet Mint", d: "The Chrome wallet that signs and encrypts your cards. It shows every card before you approve, and it gives each Hermes its own decrypt-only key that you can revoke.",
+      links: [["Get Wave Wallet Mint", "https://oswave.io/mint"]] },
+    { k: "The chain", t: "Theta Network", d: "The blockchain your cards live on, permanently. Minting costs a small network fee in TFUEL, Theta's gas token. Theta EdgeCloud is its decentralized GPU network, which Wave OS uses for AI.",
+      links: [["thetatoken.org", "https://www.thetatoken.org"], ["Theta Explorer", "https://explorer.thetatoken.org"]] },
+    { k: "Get TFUEL", t: "ThetaSwap", d: "The decentralized exchange of the Theta Network, built by OpenTheta. Swap Theta tokens from your own wallet, or buy TFUEL with a card to pay for minting.",
+      links: [["thetaswap.org", "https://thetaswap.org"], ["Buy TFUEL", "https://thetaswap.org/buy/tfuel"]] },
+  ];
+  function About(props) {
+    return h("div", null,
+      h("div", { className: "bv-about-intro" },
+        h("h2", null, "Hermes puts your agent in any browser. Wave puts your agent's memory on any machine."),
+        h("p", null, "Wave | BrainVault Mint gives Hermes a memory you own. It's kept on this computer first, minted to your wallet's vault on Theta when you choose, and readable by any Hermes you pair. Nothing here can sign, spend or mint: every card goes through Wave Wallet Mint, where you see it first.")),
+      h("div", { className: "bv-about" }, ABOUT.map(function (a) {
+        return h("div", { key: a.t, className: "bv-about-card" },
+          h("div", { className: "k" }, a.k), h("h3", null, a.t), h("p", null, a.d),
+          h("div", { className: "links" }, a.links.map(function (l) { return h(Link, { key: l[1], className: "bv-btn sm", href: l[1] }, ic.link(), l[0]); })));
+      })),
+      h("div", { className: "bv-note" }, "Links open in your browser. ThetaSwap and Theta Network are independent projects; Wave OS isn't affiliated with them. Crypto prices move: only buy what you need for minting."));
+  }
+
   function BrainVaultPage() {
     var _a = useState(null), data = _a[0], setData = _a[1];
     var _b = useState(null), err = _b[0], setErr = _b[1];
@@ -274,6 +337,8 @@ function createWaveBrainVault(env) {
     var _d = useState(false), syncing = _d[0], setSyncing = _d[1];
     var _e = useState(null), toast = _e[0], setToast = _e[1];
     var _f = useState(null), fresh = _f[0], setFresh = _f[1];
+    var _t = useTheme(), theme = _t[0], toggleTheme = _t[1];
+    var _v = useState("home"), view = _v[0], setView = _v[1];
     var _g = useState(null), report = _g[0], setReport = _g[1];
     var _k = useState(false), checking = _k[0], setChecking = _k[1];
     function onDoctor() {
@@ -337,19 +402,23 @@ function createWaveBrainVault(env) {
     }
     function onWallet(a) { return act(call("/wallet", { address: a }), function () { say("Wallet saved. Syncing your vault\u2026"); setTimeout(onSync, 300); return true; }); }
 
-    if (err && !data) return h("div", { className: "bv" }, h("div", { className: "bv-pair" }, h("div", null, h("h3", null, "Wave | BrainVault Mint couldn't load"), h("div", { style: { color: "var(--bv-dim)" } }, err))));
-    if (!data) return h("div", { className: "bv" }, h("div", { className: "bv-empty" }, h("div", { className: "bv-spin", style: { margin: "0 auto 10px" } }), "Loading your memory\u2026"));
+    if (err && !data) return h("div", { className: "bv", "data-bv-theme": theme }, h("div", { className: "bv-pair" }, h("div", null, h("h3", null, "Wave | BrainVault Mint couldn't load"), h("div", { style: { color: "var(--bv-dim)" } }, err))));
+    if (!data) return h("div", { className: "bv", "data-bv-theme": theme }, h("div", { className: "bv-empty" }, h("div", { className: "bv-spin", style: { margin: "0 auto 10px" } }), "Loading your memory\u2026"));
 
     var s = data.status, ww = data.wave_web || "https://web.oswave.io";
     var lastSync = isoTs(s.last_sync);
-    return h("div", { className: "bv" },
+    return h("div", { className: "bv", "data-bv-theme": theme }, h("div", { className: "bv-wrap" },
       h("div", { className: "bv-hero" },
         h("div", { className: "bv-top" },
           h(Logo),
           h("div", null, h("h1", { className: "bv-title" }, h("span", { className: "bv-wave" }, "Wave"), h("span", { className: "bv-pipe" }, "|"), "BrainVault", h(MintBadge)), h("div", { className: "bv-sub" }, "Your Hermes memory, owned by your wallet, stored on Theta.")),
           h("div", { className: "bv-sp" }),
+          h(ThemeToggle, { theme: theme, onToggle: toggleTheme }),
           h("button", { className: "bv-btn", onClick: onDoctor, disabled: checking }, checking ? h("div", { className: "bv-spin" }) : ic.shield(), "Check setup"),
           h("button", { className: "bv-btn", onClick: onSync, disabled: busy || !s.wallet }, syncing ? h("div", { className: "bv-spin" }) : ic.sync(), "Sync"),
+          view === "about"
+            ? h("button", { className: "bv-btn", onClick: function () { setView("home"); } }, ic.back(), "Back")
+            : h("button", { className: "bv-btn", onClick: function () { setView("about"); } }, ic.info(), "About"),
           h(Link, { className: "bv-btn", href: ww }, ic.link(), "Wave Web")),
         h("div", { className: "bv-chips" },
           h("span", { className: "bv-chip " + (s.wallet ? "ok" : "warn") }, h("span", { className: "bv-dot" + (s.wallet ? " on" : "") }), "Wallet ", h("b", null, data.wallet_short || "not set")),
@@ -360,6 +429,7 @@ function createWaveBrainVault(env) {
           h("span", { className: "bv-chip" }, ic.shield(), "Never signs, never mints, never sees your wallet key")),
         h(Flow, { s: s })),
       h(Doctor, { report: report, onClose: function () { setReport(null); } }),
+      view === "about" ? h(About) : h(React.Fragment, null,
       !s.wallet ? h(WalletBanner, { onSave: onWallet }) : null,
       s.wallet && !s.paired ? h(PairBanner, { pairing: data.pairing, onPair: onPair, busy: busy }) : null,
       h(Stats, { s: s, mems: data.memories }),
@@ -367,12 +437,12 @@ function createWaveBrainVault(env) {
         h(Memories, { mems: data.memories, onRemember: onRemember, onSend: onSend, onForget: onForget, busy: busy, fresh: fresh, waveWeb: ww, defaultPrivate: s.default_private }),
         h("div", null,
           h(Recall, { waveWeb: ww }),
-          h(Vault, { cards: data.cards, onSync: onSync, busy: busy, syncing: syncing, wallet: s.wallet, waveWeb: ww }))),
+          h(Vault, { cards: data.cards, onSync: onSync, busy: busy, syncing: syncing, wallet: s.wallet, waveWeb: ww })))),
       h("div", { className: "bv-foot" },
         h("span", null, ic.shield(), "Private cards are encrypted in Wave Wallet Mint, not here"),
         h("span", null, ic.check(), "Every card read from Theta is fingerprint-checked"),
         h("span", null, "Wave | BrainVault Mint " + (s.version || "") + " \u00b7 a Wave OS product")),
-      h(Toast, { toast: toast, onClose: function () { setToast(null); } }));
+      h(Toast, { toast: toast, onClose: function () { setToast(null); } })));
   }
 
   return BrainVaultPage;
