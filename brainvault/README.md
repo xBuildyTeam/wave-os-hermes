@@ -1,5 +1,7 @@
 # Wave | BrainVault for Hermes
 
+**Hermes puts your agent in any browser. Wave puts your agent's memory on any machine.**
+
 *Part of [Wave OS for Hermes](../README.md). Wave OS: [oswave.io](https://oswave.io) · Wave Web: [web.oswave.io](https://web.oswave.io)*
 
 Portable, owner-held memory for [Hermes Agent](https://github.com/NousResearch/hermes-agent).
@@ -35,16 +37,22 @@ Not sure where your Hermes lives? `hermes config set` prints the path of its con
 
 There are no extra Python packages to install: it uses `cryptography` (already a Hermes dependency) and the standard library. If `keyring` is installed, the agent key goes in your OS keychain. Otherwise it goes in a `0600` file.
 
-## The Wave | BrainVault tab (Hermes dashboard)
+## The Wave | BrainVault page (Hermes Desktop, Webapp and dashboard)
 
-![Wave | BrainVault in the Hermes dashboard](docs/wave-brainvault-tab.png)
+![Wave | BrainVault in the Hermes Webapp](docs/wave-brainvault-webapp.png)
 
 One screen for your whole memory: wallet, pairing and sync status, the Remember › Review › Mint › On Theta › Recall anywhere journey, your memories (add, filter, forget, send to Wave), a live recall test, and your vault cards on Theta with fingerprint checks. Pair and Sync are buttons.
 
 ```bash
-hermes plugins enable brainvault   # once: lets the dashboard load the tab
-hermes dashboard                   # opens the Hermes dashboard; click "Wave | BrainVault"
+hermes plugins enable brainvault   # once: allows the page's backend to load
 ```
+
+- **Hermes Desktop or the Webapp** (`hermes webapp`): open **Capabilities › Plugins**, turn on **Wave | BrainVault**, then click it in the sidebar (or search "BrainVault" in the command palette).
+- **Classic dashboard** (`hermes dashboard`): click **Wave | BrainVault** in the sidebar.
+
+**Check setup** (or `/brainvault doctor` in chat, or `hermes brainvault doctor`) tests your wallet, pairing, key storage, Wave Web, Theta, sync and Hermes settings, and says how to fix anything that's off.
+
+Developers: the UI lives in `ui/app.js` + `ui/style.css`. Run `python3 ui/build.py` to regenerate `dashboard/dist/` and `desktop/plugin.js`.
 
 ## Use
 
@@ -53,6 +61,7 @@ hermes dashboard                   # opens the Hermes dashboard; click "Wave | B
 | In chat | What it does |
 |---|---|
 | `/brainvault status` | Wallet, pairing and memory counts |
+| `/brainvault doctor` | Checks the whole setup and says how to fix anything wrong |
 | `/brainvault wallet 0x…` | Your Wave Wallet Mint address (to find your vault cards) |
 | `/brainvault pair` | Opens Wave Web › Pair Hermes. Approve in Wave Wallet Mint, and the agent key arrives end-to-end encrypted. Finishes in the background. |
 | `/brainvault send` | Opens a **one-time review page** in Wave Web with your new memories already filled in. Check them, keep "Readable by: Me + Hermes", and mint with Wave Wallet Mint. The link works once, for 10 minutes, and its key never reaches Wave's servers. |

@@ -110,3 +110,11 @@
 @media (max-width:1000px){.bv-grid{grid-template-columns:1fr}.bv-stats{grid-template-columns:repeat(2,1fr)}.bv-flow{grid-template-columns:repeat(5,1fr)}}
 .bv .bv-wave{color:var(--bv-mint);font-weight:800}
 .bv .bv-pipe{color:var(--bv-dim);font-weight:400;margin:0 .35em}
+.bv .bv-doctor{margin:0 0 16px}
+.bv .bv-chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--bv-line)}
+.bv .bv-chk:first-child{border-top:0}
+.bv .bv-chk-badge{flex:none;min-width:38px;text-align:center;font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px;margin-top:1px}
+.bv .bv-chk.ok .bv-chk-badge{background:color-mix(in srgb,var(--bv-mint) 18%,transparent);color:var(--bv-mint)}
+.bv .bv-chk.warn .bv-chk-badge{background:color-mix(in srgb,#f5c86b 18%,transparent);color:#f5c86b}
+.bv .bv-chk.bad .bv-chk-badge{background:color-mix(in srgb,#ff8a8a 18%,transparent);color:#ff9a9a}
+.bv .bv-chk-fix{color:var(--bv-dim);font-size:12px;margin-top:2px}

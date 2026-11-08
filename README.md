@@ -1,5 +1,7 @@
 # Wave OS for Hermes
 
+> Hermes puts your agent in any browser. Wave puts your agent's memory on any machine.
+
 Bring **Wave OS** to [Hermes Agent](https://github.com/NousResearch/hermes-agent): memory you own on the Theta blockchain, which works on any install and with any AI.
 
 Wave OS: [oswave.io](https://oswave.io) · Wave Web: [web.oswave.io](https://web.oswave.io) · Wave Wallet Mint: [oswave.io/wallet](https://oswave.io/wallet)

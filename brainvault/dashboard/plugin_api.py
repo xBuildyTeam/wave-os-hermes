@@ -163,6 +163,15 @@ def recall(q: str = "", k: int = 6):
         v.store.close()
 
 
+@router.get("/doctor")
+def doctor():
+    v, _ = _vault()
+    try:
+        return v.doctor()
+    finally:
+        v.store.close()
+
+
 @router.post("/pair")
 def pair():
     with _pair_lock:

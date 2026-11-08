@@ -21,6 +21,7 @@ def register_cli(sub) -> None:
     p.add_argument("--no-browser", action="store_true", help="Print the link instead of opening it")
     sp.add_parser("unpair", help="Delete this install's agent key (revoke it in Wave Wallet Mint too)")
     sp.add_parser("sync", help="Read new cards from your Wave vault now")
+    sp.add_parser("doctor", help="Check the setup and explain how to fix anything wrong")
     s = sp.add_parser("search", help="Search memories")
     s.add_argument("query", nargs="+")
     sp.add_parser("list", help="List local memories")
@@ -57,6 +58,11 @@ def brainvault_command(args) -> int:
         elif cmd == "unpair":
             v.unpair()
             print("Agent key deleted here. Also revoke it in Wave Wallet Mint › Settings › Agent keys.")
+        elif cmd == "doctor":
+            from ._core import format_doctor
+            r = v.doctor()
+            print(format_doctor(r))
+            return 0 if r["ok"] else 1
         elif cmd == "sync":
             print(json.dumps(v.sync(), indent=2))
         elif cmd == "search":

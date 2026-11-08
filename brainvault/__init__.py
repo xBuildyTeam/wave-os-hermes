@@ -21,7 +21,7 @@ except ImportError:  # tests / standalone
     def spawn_context_thread(target, *, name, daemon=True, args=(), kwargs=None):  # type: ignore
         return threading.Thread(target=target, name=name, daemon=daemon, args=args, kwargs=kwargs or {})
 
-from ._core import VERSION, Vault, VaultError, format_recall
+from ._core import VERSION, Vault, VaultError, format_doctor, format_recall
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +62,10 @@ _SCHEMAS = [
      "parameters": {"type": "object", "properties": {}}},
     {"name": "brainvault_sync",
      "description": "Read new cards from the user's Wave vault on Theta now (normally runs every 10 minutes).",
+     "parameters": {"type": "object", "properties": {}}},
+    {"name": "brainvault_doctor",
+     "description": "Check the Wave | BrainVault setup (wallet, pairing, key storage, Wave Web, Theta, sync, Hermes config) "
+                    "and return each problem with a plain fix. Use when something isn't working or before a demo.",
      "parameters": {"type": "object", "properties": {}}},
 ]
 
@@ -210,6 +214,8 @@ class BrainVaultMemoryProvider(MemoryProvider):
                 return json.dumps(self._start_pair())
             if tool_name == "brainvault_sync":
                 return json.dumps(v.sync())
+            if tool_name == "brainvault_doctor":
+                return json.dumps(v.doctor())
         except VaultError as e:
             return json.dumps({"error": str(e)})
         return json.dumps({"error": f"Unknown tool {tool_name}"})
@@ -241,14 +247,16 @@ class BrainVaultMemoryProvider(MemoryProvider):
                 "next": "Ask the user to approve 'Give Hermes its own memory key' in Wave Wallet Mint, then check brainvault_status."}
 
     def slash(self, raw: str = "") -> str:
-        """/brainvault [status|pair|sync|send|wallet 0x…]"""
+        """/brainvault [status|doctor|pair|sync|send|wallet 0x…]"""
         parts = (raw or "").split()
         cmd, rest = (parts[0].lower() if parts else "status"), parts[1:]
         name = {"status": "brainvault_status", "pair": "brainvault_pair", "sync": "brainvault_sync",
-                "send": "brainvault_send_to_wave", "wallet": "brainvault_set_wallet"}.get(cmd)
+                "send": "brainvault_send_to_wave", "wallet": "brainvault_set_wallet", "doctor": "brainvault_doctor"}.get(cmd)
         if not name:
-            return "Usage: /brainvault status | pair | sync | send | wallet 0x…"
+            return "Usage: /brainvault status | doctor | pair | sync | send | wallet 0x…"
         out = json.loads(self.handle_tool_call(name, {"address": rest[0]} if cmd == "wallet" and rest else {}))
+        if cmd == "doctor" and "checks" in out:
+            return format_doctor(out)
         if cmd == "status" and self._pair_result:
             out["last_pairing"] = self._pair_result
         if "url" in out or "review_url" in out:

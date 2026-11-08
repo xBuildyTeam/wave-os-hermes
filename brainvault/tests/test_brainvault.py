@@ -293,3 +293,20 @@ def test_live_sync_index(vault):
     st = vault.sync()
     assert st["seen"] >= 1 and st["hash_failed"] == 0
     assert st["skipped_other"] >= 1  # v3:190 is private to the wallet itself, not to an agent
+
+
+def test_doctor_explains_fixes(vault, monkeypatch):
+    monkeypatch.setattr(_wave, "drop_take", lambda code, **kw: None)
+    monkeypatch.setattr(vault.rpc, "block_number", lambda: 31_000_000)
+    r = vault.doctor()
+    by = {c["check"]: c for c in r["checks"]}
+    assert r["ok"] is False and by["Wallet address"]["ok"] is False and "wallet" in by["Wallet address"]["fix"]
+    assert by["Paired with Wave Wallet Mint"]["ok"] is False and "/brainvault pair" in by["Paired with Wave Wallet Mint"]["fix"]
+    assert by["Wave Web reachable"]["ok"] is True and by["Theta mainnet reachable"]["ok"] is True
+    vault.set_wallet(EDDIE)
+    vault.cfg["agent"] = {"id": "a1", "label": "Hermes test", "publicKey": VEC["agentPub"].lower()}
+    vault._key = _pv1.private_key_from_hex(VEC["agentPriv"])
+    by = {c["check"]: c for c in vault.doctor()["checks"]}
+    assert by["Paired with Wave Wallet Mint"]["ok"] is True and by["Wallet address"]["ok"] is True
+    from brainvault._core import format_doctor
+    assert "setup check" in format_doctor(vault.doctor())

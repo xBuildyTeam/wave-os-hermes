@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -57,6 +57,25 @@ def clean_tags(tags) -> list[str]:
 def make_title(body: str) -> str:
     first = re.split(r"(?<=[.!?])\s|\n", body.strip(), maxsplit=1)[0]
     return (first[:77] + "...") if len(first) > 80 else first
+
+
+def _hermes_config(hermes_home) -> dict | None:
+    """Best-effort read of Hermes's config.yaml (memory.provider, plugins.enabled). None if unreadable."""
+    p = Path(hermes_home) / "config.yaml"
+    try:
+        text = p.read_text()
+    except OSError:
+        return None
+    for loader in ("ruamel", "yaml"):
+        try:
+            if loader == "ruamel":
+                from ruamel.yaml import YAML  # what Hermes itself uses
+                return YAML(typ="safe").load(text) or {}
+            import yaml
+            return yaml.safe_load(text) or {}
+        except Exception:
+            continue
+    return None
 
 
 class Vault:
@@ -363,6 +382,72 @@ class Vault:
     def recall(self, query: str, k: int | None = None) -> list[dict]:
         return self.store.search(query, k or int(self.cfg["recall_k"]))
 
+    def doctor(self) -> dict:
+        """Check everything a demo needs, with a plain fix for each problem. Never raises."""
+        checks = []
+
+        def add(name, ok, detail, fix=""):
+            checks.append({"check": name, "ok": ok, "detail": detail, "fix": "" if ok is True else fix})
+
+        w = self.cfg.get("wallet") or ""
+        add("Wallet address", bool(ADDR_RE.match(w)), w or "not set",
+            "Tell Hermes 'my wallet is 0x…' or run /brainvault wallet 0x… (your Wave Wallet Mint address).")
+        a = self.cfg.get("agent") or {}
+        key = None
+        try:
+            key = self._load_key()
+        except Exception:
+            key = None
+        if not a:
+            add("Paired with Wave Wallet Mint", False, "not paired", "Say 'pair Wave BrainVault with my wallet' or run /brainvault pair.")
+        elif key is None:
+            add("Paired with Wave Wallet Mint", False, f"paired as \"{a.get('label')}\" but the key is missing here",
+                "Run /brainvault pair again (and revoke the old key in Wave Wallet Mint › Settings › Agent keys).")
+        else:
+            pub = _pv1.public_key_hex(key)
+            match = not a.get("publicKey") or a["publicKey"].lower() == pub.lower()
+            add("Paired with Wave Wallet Mint", match, f"\"{a.get('label')}\" ({a.get('address') or a.get('id')})",
+                "The stored key doesn't match the wallet's record. Pair again.")
+            store = self.cfg.get("key_store") or "file"
+            add("Agent key storage", True if store == "keyring" else "warn",
+                "OS keychain" if store == "keyring" else f"file ({self.home / 'agent.key'})",
+                "Optional: install the 'keyring' package in Hermes's Python, then pair again, to keep the key in your OS keychain.")
+        t0 = time.time()
+        try:
+            _wave.drop_take(_wave.new_pair_code(), base=self.cfg["wave_web"])
+            add("Wave Web reachable", True, f"{self.cfg['wave_web']} ({int((time.time() - t0) * 1000)} ms)")
+        except Exception as e:
+            add("Wave Web reachable", False, str(e)[:160], "Check your internet connection, or try again in a minute.")
+        t0 = time.time()
+        try:
+            blk = self.rpc.block_number()
+            add("Theta mainnet reachable", True, f"block {blk:,} ({int((time.time() - t0) * 1000)} ms)")
+        except Exception as e:
+            add("Theta mainnet reachable", False, str(e)[:160], "The Theta RPC didn't answer. Try again in a minute.")
+        last = float(self.store.get_meta("synced_at", "0") or 0)
+        age = time.time() - last if last else None
+        if not w:
+            add("Vault sync", "warn", "waiting for a wallet address", "Set your wallet, then run /brainvault sync.")
+        elif age is None:
+            add("Vault sync", "warn", "never synced", "Run /brainvault sync (or press Sync in the Wave | BrainVault tab).")
+        else:
+            add("Vault sync", True if age < 3600 else "warn", f"{int(age // 60)} min ago", "Run /brainvault sync.")
+        c = self.store.counts()
+        add("Card fingerprints", c.get("cards_hash_failed", 0) == 0,
+            f"{c.get('cards', 0)} cards, {c.get('cards_hash_failed', 0)} failed",
+            "A card's text didn't match its on-chain hash, so BrainVault ignores it. Nothing to fix; tell Wave if this keeps happening.")
+        hermes_cfg = _hermes_config(self.home.parent)
+        prov = ((hermes_cfg.get("memory") or {}).get("provider") or "") if hermes_cfg else ""
+        add("Active memory provider", prov == "brainvault" if hermes_cfg else "warn", prov or "unknown",
+            "Run: hermes config set memory.provider brainvault")
+        enabled = ((hermes_cfg.get("plugins") or {}).get("enabled") or []) if hermes_cfg else []
+        add("Wave | BrainVault tab enabled", True if "brainvault" in enabled else "warn",
+            "yes" if "brainvault" in enabled else "no",
+            "Run: hermes plugins enable brainvault  (then open it in hermes dashboard, Hermes Desktop or the Webapp)")
+        ok = not any(x["ok"] is False for x in checks)
+        return {"version": VERSION, "ok": ok, "problems": sum(1 for x in checks if x["ok"] is False),
+                "warnings": sum(1 for x in checks if x["ok"] == "warn"), "checks": checks}
+
     def status(self) -> dict:
         a = self.cfg.get("agent") or {}
         last = float(self.store.get_meta("synced_at", "0") or 0)
@@ -388,4 +473,15 @@ def format_recall(hits: list[dict]) -> str:
             text = text[:600] + "…"
         lines.append(f"- [{where}{' · private' if h.get('private') else ''}{flag}] {text}")
     lines.append("</brainvault-recall>")
+    return "\n".join(lines)
+
+
+def format_doctor(r: dict) -> str:
+    mark = {True: "OK  ", False: "FIX ", "warn": "NOTE"}
+    lines = [f"Wave | BrainVault {r['version']} setup check: " + ("all good" if r["ok"] and not r["warnings"] else
+             f"{r['problems']} to fix, {r['warnings']} notes")]
+    for c in r["checks"]:
+        lines.append(f"  {mark.get(c['ok'], '?   ')} {c['check']}: {c['detail']}")
+        if c["fix"]:
+            lines.append(f"       → {c['fix']}")
     return "\n".join(lines)
