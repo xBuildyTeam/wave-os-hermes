@@ -109,6 +109,38 @@ def forget(body: IdIn):
         v.store.close()
 
 
+class EditIn(BaseModel):
+    id: str
+    text: str = Field(min_length=1, max_length=4000)
+    title: str = ""
+    tags: list[str] = []
+    private: bool = True
+
+
+@router.post("/edit")
+def edit(body: EditIn):
+    v, core = _vault()
+    try:
+        return v.edit(body.id, text=body.text, title=body.title, tags=body.tags, private=body.private)
+    except core.VaultError as e:
+        raise HTTPException(400, str(e))
+    finally:
+        v.store.close()
+
+
+class EstimateIn(BaseModel):
+    ids: list[str] = []
+
+
+@router.post("/estimate")
+def estimate(body: EstimateIn):
+    v, _ = _vault()
+    try:
+        return v.estimate(body.ids or None)
+    finally:
+        v.store.close()
+
+
 class SendIn(BaseModel):
     ids: list[str] = []
 

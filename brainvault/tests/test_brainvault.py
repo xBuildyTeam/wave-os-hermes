@@ -325,3 +325,26 @@ def test_doctor_reads_utf8_hermes_config(tmp_path, monkeypatch):
     monkeypatch.setattr(v, "_doctor", lambda: 1 / 0)
     assert v.doctor()["checks"][0]["check"] == "Setup check"
     v.store.close()
+
+
+def test_edit_before_mint_and_estimate(vault, monkeypatch):
+    r = vault.remember("The demo is due Nov 11.", tags=["hackathon"], private=True)
+    new = vault.edit(r["id"], text="The demo is due November 11 at 5 PM EST.", title="Demo due", tags=["deadline"], private=True)
+    assert new["id"] != r["id"]
+    mems = {m["fp"]: m for m in vault.store.memories()}
+    assert r["id"] not in mems and mems[new["id"]]["title"] == "Demo due" and mems[new["id"]]["tags"] == ["deadline"]
+    # same text, new settings: goes back to "only here"
+    vault.store.mark_exported([new["id"]])
+    same = vault.edit(new["id"], text="The demo is due November 11 at 5 PM EST.", tags=["deadline"], private=False)
+    assert same["id"] == new["id"] and vault.store.memory(new["id"])["state"] == "local" and not vault.store.memory(new["id"])["private"]
+    # minted cards are permanent
+    vault.store.mark_minted(new["id"], "v3:999")
+    with pytest.raises(VaultError):
+        vault.edit(new["id"], text="changed", private=True)
+    # cost estimate: one private card ~ 0.9-1.5 TFUEL at 4,000 gwei
+    monkeypatch.setattr(vault.rpc, "call", lambda m, p: hex(4000 * 10**9))
+    vault.remember("Wave Web lives at web.oswave.io.", private=True)
+    e = vault.estimate()
+    assert e["cards"] == 1 and e["approvals"] == 1 and 0.8 < e["tfuel"] < 1.6
+    with pytest.raises(VaultError):
+        vault.edit(vault.store.memories(states=("local",))[0]["fp"], text="api key sk-proj-" + "a" * 40, private=True)

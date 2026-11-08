@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.4.3"
+VERSION = "0.5.0"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -288,6 +288,51 @@ class Vault:
                               target=target, source={"session": md.get("session_id", ""), "via": md.get("tool_name", "memory")})
         except VaultError:
             pass
+
+    def edit(self, fp: str, *, text: str, title: str = "", tags=None, private: bool = True) -> dict:
+        body = (text or "").strip()
+        if not body:
+            raise VaultError("A memory can't be empty. Use Forget to remove it.")
+        hits = _screen.blocked(body + "\n" + title, private=private)
+        if hits:
+            raise VaultError(f"Not saved: it looks like {', '.join(hits)}. BrainVault never stores those.")
+        if not (len(body.encode()) <= PRIVATE_BODY_MAX if private else len(body) <= PUBLIC_BODY_MAX):
+            raise VaultError(f"Too long for one card ({'1,800 bytes' if private else '2,000 characters'}). Split it.")
+        try:
+            new_fp = self.store.update_memory(fp, title=(title or make_title(body))[:120], body=body,
+                                              tags=clean_tags(tags), private=bool(private))
+        except KeyError:
+            raise VaultError("That memory isn't here anymore.")
+        except PermissionError:
+            raise VaultError("That memory is already on chain, and cards are permanent. Remember a new one instead.")
+        except FileExistsError:
+            raise VaultError("You already have a memory with exactly that text.")
+        return {"id": new_fp, "private": bool(private)}
+
+    # Gas per card on BrainVault v3, fitted to real mints (1-29 cards per batch, 126-24,511 bytes):
+    # about 60k per transaction + 180k per card + 110 per stored byte. Rounded up on purpose.
+    def estimate(self, fps: list[str] | None = None) -> dict:
+        """Rough TFUEL cost to mint these memories (default: everything not sent yet). Wave Wallet Mint shows the exact fee."""
+        states = ("local", "exported") if fps else ("local",)
+        mems = [m for m in self.store.memories(states=states) if m["trust"] != "external"]
+        if fps:
+            want = set(fps)
+            mems = [m for m in mems if m["fp"] in want]
+        try:
+            price = int(self.rpc.call("eth_gasPrice", []), 16)
+        except Exception:
+            price = 4000 * 10**9  # Theta mainnet's usual 4,000 gwei
+        gas, total_bytes = 0, 0
+        for m in mems:
+            n = len((m["body"] + "\n\n(from Hermes · agent · 2026-01-01)").encode()) + sum(len(t) + 2 for t in m["tags"])
+            stored = 4 + -(-(n + 93) * 4 // 3) if m["private"] else n  # PV1: key + iv + tag, then base64url
+            total_bytes += stored
+            gas += 180_000 + 110 * stored
+        batches = -(-len(mems) // 50) if mems else 0
+        gas += 60_000 * batches
+        tfuel = gas * price / 1e18
+        return {"cards": len(mems), "private": sum(1 for m in mems if m["private"]), "bytes": total_bytes,
+                "gas": gas, "tfuel": round(tfuel, 2), "approvals": 1 if mems else 0}
 
     def forget(self, id_or_text: str) -> int:
         return self.store.remove_memory(fp=id_or_text) if re.fullmatch(r"[0-9a-f]{16}", id_or_text) else \

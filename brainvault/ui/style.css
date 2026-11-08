@@ -153,3 +153,9 @@
 .bv .bv-ta::placeholder,.bv .bv-in::placeholder{color:var(--bv-dim)!important;-webkit-text-fill-color:var(--bv-dim);opacity:1}
 .bv .bv-sendbar,.bv .bv-sendbar span{color:var(--bv-ink)}
 .bv .bv-ref{color:var(--bv-teal-ink)}
+
+.bv .bv-edit{display:grid;gap:8px;min-width:0}
+.bv .bv-edit .bv-in{height:32px;padding:4px 10px}
+.bv .bv-edit-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bv .bv-hint{font-size:11.5px;color:var(--bv-dim)}.bv .bv-hint.bad{color:var(--bv-red)}
+.bv .bv-cost{color:var(--bv-dim)}

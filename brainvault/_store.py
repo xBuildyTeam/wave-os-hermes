@@ -94,6 +94,36 @@ class Store:
             self._db.commit()
         return fp, True
 
+    def update_memory(self, fp: str, *, title: str, body: str, tags: list[str], private: bool) -> str:
+        """Edit a memory that isn't minted yet. A new body gets a new fingerprint; the old row is retired."""
+        new_fp = fingerprint(body)
+        now = time.time()
+        with self._lock:
+            row = self._db.execute("SELECT * FROM memories WHERE fp=?", (fp,)).fetchone()
+            if not row or row["state"] == "removed":
+                raise KeyError(fp)
+            if row["state"] == "minted":
+                raise PermissionError("minted")
+            if new_fp != fp:
+                clash = self._db.execute("SELECT state FROM memories WHERE fp=?", (new_fp,)).fetchone()
+                if clash and clash["state"] != "removed":
+                    raise FileExistsError(new_fp)
+                self._db.execute(
+                    "INSERT INTO memories(fp,title,body,tags,target,trust,private,source,created,updated,state) "
+                    "VALUES(?,?,?,?,?,?,?,?,?,?, 'local') ON CONFLICT(fp) DO UPDATE SET title=excluded.title, "
+                    "body=excluded.body, tags=excluded.tags, target=excluded.target, trust=excluded.trust, "
+                    "private=excluded.private, source=excluded.source, created=excluded.created, "
+                    "updated=excluded.updated, state='local', exported_at=NULL, card_ref=NULL",
+                    (new_fp, title, body, json.dumps(tags), row["target"], row["trust"], int(private), row["source"],
+                     row["created"], now))
+                self._db.execute("UPDATE memories SET state='removed', updated=? WHERE fp=?", (now, fp))
+            else:
+                # Same text: an edit sends it back to "only here" so the next Send carries the change.
+                self._db.execute("UPDATE memories SET title=?, tags=?, private=?, updated=?, state='local', "
+                                 "exported_at=NULL WHERE fp=?", (title, json.dumps(tags), int(private), now, fp))
+            self._db.commit()
+        return new_fp
+
     def remove_memory(self, *, fp: str | None = None, body: str | None = None) -> int:
         if not fp and body is not None:
             fp = fingerprint(body)

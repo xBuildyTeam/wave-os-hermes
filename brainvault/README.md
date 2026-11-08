@@ -64,6 +64,8 @@ hermes plugins enable brainvault   # once: allows the page's backend to load
 - **Hermes Desktop or the Webapp** (`hermes webapp`): open **Capabilities › Plugins**, turn on **Wave | BrainVault Mint**, then click it in the sidebar (or search "BrainVault" in the command palette).
 - **Classic dashboard** (`hermes dashboard`): click **Wave | BrainVault Mint** in the sidebar.
 
+**Edit before you send.** Open a memory and click **Edit** to change its text, title, topic tags or Private/Public. The send bar shows about what minting will cost (Wave Wallet Mint shows the exact fee). Then **Send to Wave** opens Wave Web, where minting is one click and one wallet approval.
+
 **Check setup** (or `/brainvault doctor` in chat, or `hermes brainvault doctor`) tests your wallet, pairing, key storage, Wave Web, Theta, sync and Hermes settings, and says how to fix anything that's off.
 
 Developers: the UI lives in `ui/app.js` + `ui/style.css`. Run `python3 ui/build.py` to regenerate `dashboard/dist/` and `desktop/plugin.js`.
