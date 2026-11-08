@@ -181,7 +181,7 @@ def test_chat_tools_and_slash(tmp_path, monkeypatch):
     assert json.loads(p.slash("wallet " + EDDIE))["wallet"] == EDDIE
     p.handle_tool_call("brainvault_remember", {"text": "Slash command fact"})
     out = json.loads(p.slash("send"))
-    assert out["opened"] and "#k=" in out["link"]
+    assert out["opened"] and "#k=" not in out["link"] and "key hidden" in out["link"]  # key never shown to the model
     assert "Usage" in p.slash("bogus")
     # pairing runs in the background and reports through status
     monkeypatch.setattr(Vault, "pair_wait", lambda self, pend, **kw: {"agent": {"label": "Hermes test"}, "key_store": "file"})
@@ -425,3 +425,11 @@ def test_wave_guide_live(tmp_path):
     from brainvault import _guide
     r = _guide.Guide(tmp_path).ask("what is a .theta name")
     assert r["listing"] and r["results"][0]["source"] == "wavey" and r["results"][0]["verified_on_chain"]
+
+
+def test_wave_web_is_pinned_to_https_wave_domains():
+    from brainvault._core import _safe_wave_web
+    assert _safe_wave_web("https://web.oswave.io/") == "https://web.oswave.io"
+    for bad in ("http://web.oswave.io", "https://web.oswave.io.evil.com", "https://evil.com", "https://user@web.oswave.io",
+                "https://web.oswave.io:8443", "file:///etc/passwd", "javascript:alert(1)", None, ""):
+        assert _safe_wave_web(bad) == "https://web.oswave.io", bad

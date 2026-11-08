@@ -240,6 +240,10 @@ class BrainVaultMemoryProvider(MemoryProvider):
                     return json.dumps({"error": "Only the primary agent sends memories to Wave."})
                 r = v.export_pack(include_exported=bool(args.get("include_sent")))
                 r["opened"] = _open(r["review_url"])
+                if r["opened"] and "#k=" in r["review_url"]:
+                    # The link carries the one-time decryption key: don't hand it to the AI model (and its provider)
+                    # when the browser already has it. Only show it when the user has to open it by hand.
+                    r["review_url"] = r["review_url"].split("#", 1)[0] + "#(key hidden: already opened in your browser)"
                 r["next"] = ("The review page shows the cards. The user checks them, keeps Readable by on their Hermes, and mints "
                              "with Wave Wallet Mint, which shows every card before signing. Then call brainvault_sync.")
                 if "path" in r:

@@ -1,5 +1,5 @@
 name: brainvault
-version: 0.6.0
+version: 0.6.1
 description: "Wave | BrainVault Mint: portable, owner-held memory for Hermes. Remembers locally, mints to your own Wave vault on Theta (private cards encrypted to you), and reads it back on any install."
 author: Wave OS (oswave.io)
 homepage: https://github.com/xBuildyTeam/wave-os-hermes

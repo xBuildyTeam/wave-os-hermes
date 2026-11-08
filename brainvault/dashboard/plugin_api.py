@@ -127,7 +127,7 @@ def state():
 
 class RememberIn(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
-    title: str = ""
+    title: str = Field(default="", max_length=200)
     private: Optional[bool] = None
 
 
@@ -159,8 +159,8 @@ def forget(body: IdIn):
 class EditIn(BaseModel):
     id: str
     text: str = Field(min_length=1, max_length=4000)
-    title: str = ""
-    tags: list[str] = []
+    title: str = Field(default="", max_length=200)
+    tags: list[str] = Field(default=[], max_length=10)
     private: bool = True
 
 
@@ -176,7 +176,7 @@ def edit(body: EditIn):
 
 
 class EstimateIn(BaseModel):
-    ids: list[str] = []
+    ids: list[str] = Field(default=[], max_length=500)
 
 
 @router.post("/estimate")
@@ -189,7 +189,7 @@ def estimate(body: EstimateIn):
 
 
 class SendIn(BaseModel):
-    ids: list[str] = []
+    ids: list[str] = Field(default=[], max_length=500)
 
 
 @router.post("/send")
@@ -215,7 +215,7 @@ def sync():
 
 
 class WalletIn(BaseModel):
-    address: str
+    address: str = Field(max_length=64)
 
 
 @router.post("/wallet")

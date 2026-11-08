@@ -119,7 +119,8 @@ def encrypt(plaintext: str, recipient_pub_hex: str) -> str:
     # the true shared point = eph * R; recover its y by matching against a second, independent derivation
     # is impossible without point math, so compute it directly:
     point = _mul_point(eph.private_numbers().private_value, rpub)
-    assert point[1:33] == x
+    if point[1:33] != x:
+        raise PV1Error("Key agreement self-check failed")
     nonce = os.urandom(12)
     ct = AESGCM(_hkdf(point)).encrypt(nonce, plaintext.encode("utf-8"), None)
     eph_raw = eph.public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)

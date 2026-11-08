@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.6.0"
+VERSION = "0.6.1"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -31,6 +31,19 @@ DEFAULTS = {
 # Public cards are only pulled into recall when they're memories, not bot design/rules/knowledge cards.
 MEMORY_TAGS = frozenset({"hermes:memory", "user:memory", "memory", "user:public", "user:note"})
 _KEYRING_SERVICE = "hermes-brainvault"
+
+
+def _safe_wave_web(url) -> str:
+    """Only talk to Wave Web over HTTPS on a Wave domain, whatever the config file says."""
+    from urllib.parse import urlparse
+    try:
+        u = urlparse(str(url or ""))
+        host = (u.hostname or "").lower()
+        if u.scheme == "https" and (host == "oswave.io" or host.endswith(".oswave.io")) and not u.username and not u.port:
+            return f"https://{host}"
+    except ValueError:
+        pass
+    return _wave.WAVE_WEB
 
 
 class VaultError(RuntimeError):
@@ -120,6 +133,7 @@ class Vault:
             pass
         self.cfg_path = self.home / "config.json"
         self.cfg = {**DEFAULTS, **self._read_cfg()}
+        self.cfg["wave_web"] = _safe_wave_web(self.cfg.get("wave_web"))
         self.store = Store(self.home / "brainvault.db")
         try:  # drop bot/design cards an older version synced in, so they never show up as memories
             self.store.prune_public_cards(MEMORY_TAGS)
