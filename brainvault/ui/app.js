@@ -6,6 +6,7 @@
 function createWaveBrainVault(env) {
   "use strict";
   var React = env.React, h = React.createElement, call = env.call, open = env.open;
+  var UI_VERSION = "__BV_UI_VERSION__";
   var useState = React.useState, useEffect = React.useEffect, useCallback = React.useCallback, useRef = React.useRef;
 
   function Link(props) {
@@ -481,6 +482,13 @@ function createWaveBrainVault(env) {
           h("span", { className: "bv-chip" }, ic.lock(), s.default_private ? "Private by default" : "Public by default"),
           h("span", { className: "bv-chip" }, ic.shield(), "Never signs, never mints, never sees your wallet key")),
         h(Flow, { s: s })),
+      data.versions && data.versions.installed && !data.versions.restart_needed && UI_VERSION.indexOf("__") !== 0 && data.versions.installed !== UI_VERSION
+        ? h("div", { className: "bv-update" }, ic.sync(), h("div", null, h("b", null, "Updated to " + data.versions.installed + "."),
+            " Reload this page to see what's new: press Ctrl+R (Cmd+R on a Mac), or refresh the browser tab.")) : null,
+      data.versions && data.versions.restart_needed ? h("div", { className: "bv-update" }, ic.sync(),
+        h("div", null, h("b", null, "Updated to " + data.versions.installed + "."),
+          " Hermes is still running " + (data.versions.chat && data.versions.chat !== data.versions.installed ? data.versions.chat : data.versions.page) +
+          " in the background. Fully quit Hermes (including the tray icon) and reopen it to finish the update.")) : null,
       h(Doctor, { report: report, onClose: function () { setReport(null); } }),
       view === "about" ? h(About) : h(React.Fragment, null,
       !s.wallet ? h(WalletBanner, { onSave: onWallet }) : null,
@@ -494,7 +502,7 @@ function createWaveBrainVault(env) {
       h("div", { className: "bv-foot" },
         h("span", null, ic.shield(), "Private cards are encrypted in Wave Wallet Mint, not here"),
         h("span", null, ic.check(), "Every card read from Theta is fingerprint-checked"),
-        h("span", null, "Wave | BrainVault Mint " + (s.version || "") + " \u00b7 a Wave OS product")),
+        h("span", null, "Wave | BrainVault Mint " + ((data.versions && data.versions.installed) || s.version || "") + " \u00b7 a Wave OS product")),
       h(Toast, { toast: toast, onClose: function () { setToast(null); } })));
   }
 

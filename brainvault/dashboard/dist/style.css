@@ -159,3 +159,7 @@
 .bv .bv-edit-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .bv .bv-hint{font-size:11.5px;color:var(--bv-dim)}.bv .bv-hint.bad{color:var(--bv-red)}
 .bv .bv-cost{color:var(--bv-dim)}
+
+.bv .bv-update{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;padding:10px 14px;border-radius:12px;font-size:12.5px;
+  border:1px solid color-mix(in srgb,var(--bv-amber) 45%,transparent);background:color-mix(in srgb,var(--bv-amber) 10%,var(--bv-card));color:var(--bv-ink)}
+.bv .bv-update svg{flex:none;margin-top:2px;color:var(--bv-amber)}

@@ -118,6 +118,11 @@ class BrainVaultMemoryProvider(MemoryProvider):
             from hermes_constants import get_hermes_home
             home = get_hermes_home()
         self._vault = Vault(home)
+        try:  # lets the page tell the user when Hermes is still running an older copy after an update
+            from ._core import VERSION as _V
+            self._vault.store.set_meta("provider_version", _V)
+        except Exception:
+            pass
         self._session_id = session_id
         self._writes = kwargs.get("agent_context", "primary") == "primary"
         self._maybe_sync()

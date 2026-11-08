@@ -1,5 +1,7 @@
 # Wave | BrainVault Mint for Hermes
 
+![Wave | BrainVault Mint](docs/catalog-banner.png)
+
 **Hermes puts your agent in any browser. Wave puts your agent's memory on any machine.**
 
 *Part of [Wave OS for Hermes](../README.md). Wave OS: [oswave.io](https://oswave.io) · Wave Web: [web.oswave.io](https://web.oswave.io)*
