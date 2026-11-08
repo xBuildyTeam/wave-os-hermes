@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.5.5"
+VERSION = "0.6.0"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -332,6 +332,17 @@ class Vault:
 
     # Gas per card on BrainVault v3, fitted to real mints (1-29 cards per batch, 126-24,511 bytes):
     # about 60k per transaction + 180k per card + 110 per stored byte. Rounded up on purpose.
+    def ask_wavey(self, question: str, k: int = 4) -> dict:
+        """Wave questions answered from Wavey's public, chain-verified cards (see _guide)."""
+        from ._guide import Guide
+        g = getattr(self, "_guide", None)
+        if g is None:
+            g = self._guide = Guide(self.home, self.rpc)
+        try:
+            return g.ask(question, k)
+        except ValueError as e:
+            raise VaultError(str(e))
+
     def estimate(self, fps: list[str] | None = None) -> dict:
         """Rough TFUEL cost to mint these memories (default: everything not sent yet). Wave Wallet Mint shows the exact fee."""
         states = ("local", "exported") if fps else ("local",)

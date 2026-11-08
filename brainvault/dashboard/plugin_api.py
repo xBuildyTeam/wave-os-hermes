@@ -242,6 +242,19 @@ def recall(q: str = "", k: int = 6):
         v.store.close()
 
 
+@router.get("/guide")
+def guide(q: str = ""):
+    v, core = _vault()
+    try:
+        if not q.strip():
+            return {"results": []}
+        return v.ask_wavey(q[:300])
+    except core.VaultError as e:
+        raise HTTPException(400, str(e))
+    finally:
+        v.store.close()
+
+
 @router.get("/doctor")
 def doctor():
     v, _ = _vault()

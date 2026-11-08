@@ -22,6 +22,8 @@ def register_cli(sub) -> None:
     sp.add_parser("unpair", help="Delete this install's agent key (revoke it in Wave Wallet Mint too)")
     sp.add_parser("sync", help="Read new cards from your Wave vault now")
     sp.add_parser("doctor", help="Check the setup and explain how to fix anything wrong")
+    gq = sp.add_parser("guide", help="Ask Wavey, Wave's guide bot (answers from its cards on Theta)")
+    gq.add_argument("question", nargs="+")
     s = sp.add_parser("search", help="Search memories")
     s.add_argument("query", nargs="+")
     sp.add_parser("list", help="List local memories")
@@ -63,6 +65,9 @@ def brainvault_command(args) -> int:
             r = v.doctor()
             print(format_doctor(r))
             return 0 if r["ok"] else 1
+        elif cmd == "guide":
+            from ._guide import format_answer
+            print(format_answer(v.ask_wavey(" ".join(args.question))))
         elif cmd == "sync":
             print(json.dumps(v.sync(), indent=2))
         elif cmd == "search":

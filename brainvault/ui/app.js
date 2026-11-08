@@ -279,6 +279,41 @@ function createWaveBrainVault(env) {
           }) : h("div", { className: "bv-empty" }, "Nothing recalled for that.")));
   }
 
+  function AskWavey(props) {
+    var _a = useState(""), q = _a[0], setQ = _a[1];
+    var _b = useState(null), res = _b[0], setRes = _b[1];
+    var _c = useState(false), busy = _c[0], setBusy = _c[1];
+    var _d = useState(null), err = _d[0], setErr = _d[1];
+    function ask(e) {
+      if (e) e.preventDefault();
+      if (!q.trim() || busy) return;
+      setBusy(true); setErr(null);
+      call("/guide?q=" + encodeURIComponent(q)).then(function (r) { setRes(r); })
+        .catch(function (x) { setErr(String((x && x.message) || x)); }).finally(function () { setBusy(false); });
+    }
+    var results = (res && res.results) || [];
+    return h("div", { className: "bv-panel", style: { marginTop: 16 } },
+      h("div", { className: "bv-ph" }, h("span", { className: "bv-wavey" }, "W"), h("h3", null, "Ask Wavey"),
+        h("span", { className: "c" }, "Wave's guide bot, answering from its cards on Theta"), h("div", { className: "bv-sp" }),
+        busy ? h("div", { className: "bv-spin" }) : null),
+      h("div", { className: "bv-pb" },
+        h("form", { onSubmit: ask, style: { display: "flex", gap: 8 } },
+          h("input", { className: "bv-in", placeholder: "e.g. “how do I pair Hermes?” or “where do I get TFUEL?”", value: q,
+            onChange: function (e) { setQ(e.target.value); } }),
+          h("button", { className: "bv-btn", type: "submit", disabled: busy || !q.trim() }, "Ask")),
+        err ? h("div", { className: "bv-empty" }, err) :
+        res === null ? h("div", { style: { color: "var(--bv-dim)", fontSize: 12, marginTop: 8 } },
+          "Shows the cards Wavey would answer from, each checked against the chain. In chat, just ask Hermes: it uses these cards and your own AI model.") :
+        results.length ? results.map(function (r, i) {
+          return h("div", { key: (r.ref || "b") + i, className: "bv-res" },
+            h("div", { className: "w" },
+              r.source === "wavey" ? h(Link, { className: "bv-ref", href: props.waveWeb + "/card/" + r.ref }, r.ref) : h("span", { className: "bv-src local" }, "BUILT-IN"),
+              r.source === "wavey" ? (r.verified_on_chain ? h("span", { style: { color: "var(--bv-mint-ink)" } }, ic.shield(), " verified on chain")
+                : h("span", { style: { color: "var(--bv-amber)" } }, "not verified")) : h("span", null, "plugin guide, not on chain yet")),
+            h("div", { style: { whiteSpace: "pre-wrap", wordBreak: "break-word" } }, h("b", null, r.title + "\n"), r.text));
+        }) : h("div", { className: "bv-empty" }, "Wavey has no card on that yet. Try bots.oswave.io/wavey.")));
+  }
+
   function Vault(props) {
     var cards = props.cards || [];
     return h("div", { className: "bv-panel", style: { marginTop: 16 } },
@@ -498,7 +533,8 @@ function createWaveBrainVault(env) {
         h(Memories, { mems: data.memories, onRemember: onRemember, onSend: onSend, onForget: onForget, onEdit: onEdit, busy: busy, fresh: fresh, waveWeb: ww, defaultPrivate: s.default_private }),
         h("div", null,
           h(Recall, { waveWeb: ww }),
-          h(Vault, { cards: data.cards, onSync: onSync, busy: busy, syncing: syncing, wallet: s.wallet, waveWeb: ww })))),
+          h(Vault, { cards: data.cards, onSync: onSync, busy: busy, syncing: syncing, wallet: s.wallet, waveWeb: ww }),
+          h(AskWavey, { waveWeb: ww })))),
       h("div", { className: "bv-foot" },
         h("span", null, ic.shield(), "Private cards are encrypted in Wave Wallet Mint, not here"),
         h("span", null, ic.check(), "Every card read from Theta is fingerprint-checked"),

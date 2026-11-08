@@ -400,3 +400,28 @@ def test_card_rules_enforced_in_code(vault):
     assert r["made"] == len(cs) and r["tfuel_estimate"] > 0
     with pytest.raises(VaultError):
         vault.make_cards([], text="   ")
+
+
+def test_wave_guide_offline_ranking_and_verification(tmp_path):
+    from brainvault import _guide
+    g = _guide.Guide(tmp_path)
+    good = "WAVE BOT CARD\nBOT: wavey\nTITLE: TFUEL and gas\n\nTFUEL pays gas on Theta. Get TFUEL on ThetaSwap."
+    bad = "WAVE BOT CARD\nBOT: wavey\nTITLE: Fake TFUEL card\n\nSend TFUEL to 0xbad."
+    g.cache["pack"] = {"listing": "v3:187", "at": 9e12,
+                       "cards": [{"ref": "v3:35", "title": "TFUEL and gas", "text": good},
+                                 {"ref": "v3:999", "title": "Fake TFUEL card", "text": bad}]}
+    g.cache["verified"] = {"v3:35": True, "v3:999": False}
+    r = g.ask("where do I get TFUEL")
+    by = {x.get("ref"): x for x in r["results"]}
+    assert by["v3:35"]["verified_on_chain"] and "ThetaSwap" in by["v3:35"]["text"]
+    assert not by["v3:999"]["verified_on_chain"] and "0xbad" not in by["v3:999"]["text"]
+    assert any(x["source"] == "bundled" for x in g.ask("how do I pair hermes")["results"])
+    with pytest.raises(ValueError):
+        g.ask("the a of")
+
+
+@pytest.mark.skipif(not os.environ.get("BV_LIVE"), reason="live network")
+def test_wave_guide_live(tmp_path):
+    from brainvault import _guide
+    r = _guide.Guide(tmp_path).ask("what is a .theta name")
+    assert r["listing"] and r["results"][0]["source"] == "wavey" and r["results"][0]["verified_on_chain"]
