@@ -47,9 +47,10 @@ cp -r brainvault/. ~/.hermes/plugins/brainvault/
 ```
 
 ```powershell
-cd wave-os-hermes; git pull
-Copy-Item -Recurse -Force brainvault\* "$env:LOCALAPPDATA\hermes\plugins\brainvault\"
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\wave-os-hermes\brainvault\scripts\update-windows.ps1"
 ```
+
+That pulls, copies, stops Hermes so it loads the new code, and runs the setup check. Then reopen Hermes Desktop.
 
 Copy the folder's **contents** (`brainvault\*`). If the plugin folder already exists, copying `brainvault` itself puts a second `brainvault` folder inside it, and Hermes keeps running the old version. Check with `hermes brainvault doctor`: the first line shows the version.
 
