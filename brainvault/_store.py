@@ -149,6 +149,15 @@ class Store:
                  c.get("supersedes_ref"), c.get("superseded_by"), time.time()))
             self._db.commit()
 
+    def prune_public_cards(self, keep_tags) -> int:
+        """Drop stored public cards that aren't memories (e.g. bot design/rules cards synced by older versions)."""
+        with self._lock:
+            rows = self._db.execute("SELECT ref, tags FROM cards WHERE is_private=0").fetchall()
+            drop = [r["ref"] for r in rows if not (set(json.loads(r["tags"])) & set(keep_tags))]
+            self._db.executemany("DELETE FROM cards WHERE ref=?", [(r,) for r in drop])
+            self._db.commit()
+        return len(drop)
+
     def has_card(self, ref: str, content_hash: str) -> bool:
         with self._lock:
             r = self._db.execute("SELECT content_hash FROM cards WHERE ref=?", (ref,)).fetchone()

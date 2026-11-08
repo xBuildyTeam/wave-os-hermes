@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -28,6 +28,8 @@ DEFAULTS = {
     "wallet": "", "agent": None, "wave_web": _wave.WAVE_WEB, "default_private": True,
     "mirror_builtin": True, "recall_public": True, "recall_k": 5, "sync_minutes": 10,
 }
+# Public cards are only pulled into recall when they're memories, not bot design/rules/knowledge cards.
+MEMORY_TAGS = frozenset({"hermes:memory", "user:memory", "memory", "user:public", "user:note"})
 _KEYRING_SERVICE = "hermes-brainvault"
 
 
@@ -237,9 +239,12 @@ class Vault:
             self.store.remove_memory(body=id_or_text)
 
     # -- hand-off to Wave Web --
-    def export_pack(self, *, include_exported: bool = False, to_file: bool = False) -> dict:
-        states = ("local", "exported") if include_exported else ("local",)
+    def export_pack(self, *, include_exported: bool = False, to_file: bool = False, fps: list[str] | None = None) -> dict:
+        states = ("local", "exported") if include_exported or fps else ("local",)
         mems = [m for m in self.store.memories(states=states) if m["trust"] != "external"]
+        if fps:
+            want = set(fps)
+            mems = [m for m in mems if m["fp"] in want]
         if not mems:
             raise VaultError("Nothing new to send to Wave.")
         cards, skipped = [], []
@@ -297,6 +302,7 @@ class Vault:
         wallet = self.cfg.get("wallet")
         if not wallet:
             raise VaultError("No wallet address set. Run: hermes brainvault wallet 0x…")
+        self.store.prune_public_cards(MEMORY_TAGS)
         since = int(self.store.get_meta("synced_block", "0") or 0)
         metas, indexed = _wave.creator_cards(wallet, since, base=self.cfg["wave_web"])
         rid, key = self._agent_rid(), self._load_key()
@@ -307,17 +313,28 @@ class Vault:
         pending = [m for m in metas if not self.store.has_card(m["ref"], m.get("contentHash", ""))]
         todo, truncated = pending[:max_new], len(pending) > max_new
         exported = self.store.memories(states=("exported",))
+        wanted = []
         for m in todo:
+            if m.get("hidden"):
+                continue  # hidden at the owner's request in Wave Web
             if m.get("isPrivate") and (not rid or m.get("recipientId", "").lower() != rid):
                 stats["skipped_other"] += 1  # private to the wallet itself or another agent: this agent can't open it
                 continue
-            if not m.get("isPrivate") and not self.cfg["recall_public"]:
+            if not m.get("isPrivate") and (not self.cfg["recall_public"] or not (set(m.get("tags") or []) & MEMORY_TAGS)):
                 continue
+            wanted.append(m)
+
+        def read(m):
             try:
-                c = _chain.read_card(self.rpc, m["ref"])
+                return m, _chain.read_card(self.rpc, m["ref"])
             except _chain.ChainError:
-                continue
-            if c["creator"] != wallet:
+                return m, None
+
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            got = list(ex.map(read, wanted))
+        for m, c in got:
+            if c is None or c["creator"] != wallet:
                 continue
             c["superseded_by"] = m.get("superseded_by")
             c["supersedes_ref"] = m.get("supersedes")

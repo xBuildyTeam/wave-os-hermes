@@ -238,19 +238,24 @@ def test_sync_opens_agent_cards_only(vault, monkeypatch):
         "v3:300": {"text": mine, "isPrivate": True, "recipientId": rid_agent},
         "v3:301": {"text": "Public note about Wave guides", "isPrivate": False, "recipientId": "0x" + "0" * 64},
         "v3:302": {"text": VEC["cards"][0]["pv1"], "isPrivate": True, "recipientId": _chain.recipient_id_for(EDDIE)},
+        "v3:303": {"text": "WAVE BOT CARD: bot knowledge, not a memory", "isPrivate": False, "recipientId": "0x" + "0" * 64,
+                   "tags": ["bots:card", "bot:xbuildy"]},
+        "v3:304": {"text": "Hidden at the owner's request", "isPrivate": False, "recipientId": "0x" + "0" * 64, "hidden": True},
     }
     metas = [{"ref": r, "id": int(r[3:]), "isPrivate": c["isPrivate"], "recipientId": c["recipientId"],
+              "tags": c.get("tags", ["user:private"] if c["isPrivate"] else ["user:memory"]), "hidden": c.get("hidden", False),
               "contentHash": keccak_hex(c["text"].encode()), "superseded_by": None} for r, c in chain.items()]
     monkeypatch.setattr(_wave, "creator_cards", lambda creator, since, base: (metas, 999))
 
     def fake_read(rpc, ref):
         c = chain[ref]
         return {"ref": ref, "id": int(ref[3:]), "creator": EDDIE, "block": 1, "isPrivate": c["isPrivate"],
-                "recipientId": c["recipientId"], "tags": ["user:private"], "contentHash": keccak_hex(c["text"].encode()),
+                "recipientId": c["recipientId"], "tags": c.get("tags", ["user:private"] if c["isPrivate"] else ["user:memory"]), "contentHash": keccak_hex(c["text"].encode()),
                 "text": c["text"], "sha_ok": True}
     monkeypatch.setattr(_chain, "read_card", fake_read)
     st = vault.sync()
-    assert st == {"seen": 3, "new": 2, "opened": 1, "public": 1, "skipped_other": 1, "hash_failed": 0}
+    assert st == {"seen": 5, "new": 2, "opened": 1, "public": 1, "skipped_other": 1, "hash_failed": 0}
+    assert {c["ref"] for c in vault.store.cards(readable_only=False)} == {"v3:300", "v3:301"}  # no bot or hidden cards
     assert vault.store.get_meta("synced_block") == "999"
     hits = vault.recall("mint green")
     assert hits and hits[0]["kind"] == "vault" and hits[0]["ref"] == "v3:300"

@@ -1,0 +1,14 @@
+{
+  "name": "brainvault",
+  "label": "Wave | BrainVault",
+  "description": "Wave | BrainVault: your Hermes memory, owned by your wallet and stored on Theta. See memories, recall, pair, sync and send to Wave.",
+  "icon": "Database",
+  "version": "0.3.0",
+  "tab": {
+    "path": "/brainvault",
+    "position": "after:skills"
+  },
+  "entry": "dist/index.js",
+  "css": "dist/style.css",
+  "api": "plugin_api.py"
+}

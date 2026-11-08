@@ -1,9 +1,8 @@
 name: brainvault
-version: 0.2.0
-description: "Wave OS BrainVault: portable, owner-held memory for Hermes. Remembers locally, mints to your own Wave vault on Theta (private cards encrypted to you), and reads it back on any install."
+version: 0.3.0
+description: "Wave | BrainVault: portable, owner-held memory for Hermes. Remembers locally, mints to your own Wave vault on Theta (private cards encrypted to you), and reads it back on any install."
 author: Wave OS (oswave.io)
 homepage: https://github.com/xBuildyTeam/wave-os-hermes
 license: MIT
-kind: memory
 # No extra Python packages: uses `cryptography` (a core Hermes dependency) and the standard library.
 # Optional: `keyring` stores the agent key in the OS keychain instead of a 0600 file.

@@ -6,11 +6,11 @@ Wave OS: [oswave.io](https://oswave.io) · Wave Web: [web.oswave.io](https://web
 
 | Part | What it does | Status |
 |---|---|---|
-| [`brainvault/`](brainvault/) | **Wave OS BrainVault**, a Hermes memory provider. Hermes remembers locally right away. You mint memories to your own Wave vault on Theta (private ones encrypted to you), and any new install pairs once and reads them back. | v0.1.0 |
+| [`brainvault/`](brainvault/) | **Wave | BrainVault**, a Hermes memory provider. Hermes remembers locally right away. You mint memories to your own Wave vault on Theta (private ones encrypted to you), and any new install pairs once and reads them back. | v0.1.0 |
 | Wave bots + Wave AI over MCP | Find, check and call Wave bots (Checker, Tally, CHIEF…) with the price in every answer, plus Wave AI on Theta EdgeCloud. See [below](#wave-os-tools-in-hermes-mcp). | Live, needs a Wave OS MCP token |
 | `wave-ai/` | Wave AI as a Hermes model provider (run Hermes itself on Wave credits) | Planned |
 
-## Quick start: Wave OS BrainVault
+## Quick start: Wave | BrainVault
 
 ```bash
 git clone https://github.com/xBuildyTeam/wave-os-hermes

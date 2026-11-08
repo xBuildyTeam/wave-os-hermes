@@ -1,4 +1,4 @@
-# Wave OS BrainVault for Hermes
+# Wave | BrainVault for Hermes
 
 *Part of [Wave OS for Hermes](../README.md). Wave OS: [oswave.io](https://oswave.io) · Wave Web: [web.oswave.io](https://web.oswave.io)*
 
@@ -35,9 +35,20 @@ Not sure where your Hermes lives? `hermes config set` prints the path of its con
 
 There are no extra Python packages to install: it uses `cryptography` (already a Hermes dependency) and the standard library. If `keyring` is installed, the agent key goes in your OS keychain. Otherwise it goes in a `0600` file.
 
+## The Wave | BrainVault tab (Hermes dashboard)
+
+![Wave | BrainVault in the Hermes dashboard](docs/wave-brainvault-tab.png)
+
+One screen for your whole memory: wallet, pairing and sync status, the Remember › Review › Mint › On Theta › Recall anywhere journey, your memories (add, filter, forget, send to Wave), a live recall test, and your vault cards on Theta with fingerprint checks. Pair and Sync are buttons.
+
+```bash
+hermes plugins enable brainvault   # once: lets the dashboard load the tab
+hermes dashboard                   # opens the Hermes dashboard; click "Wave | BrainVault"
+```
+
 ## Use
 
-**Everything works from the Hermes chat.** Just ask: *"pair BrainVault with my wallet"*, *"my wallet is 0x…"*, *"send my memories to Wave"*, *"sync my vault"*. Or use the slash command:
+**Everything works from the Hermes chat.** Just ask: *"pair Wave BrainVault with my wallet"*, *"my wallet is 0x…"*, *"send my memories to Wave"*, *"sync my vault"*. Or use the slash command:
 
 | In chat | What it does |
 |---|---|
