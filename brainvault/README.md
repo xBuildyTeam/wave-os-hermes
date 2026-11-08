@@ -37,6 +37,20 @@ Not sure where your Hermes lives? `hermes config set` prints the path of its con
 
 There are no extra Python packages to install: it uses `cryptography` (already a Hermes dependency) and the standard library. If `keyring` is installed, the agent key goes in your OS keychain. Otherwise it goes in a `0600` file.
 
+### Updating
+
+```bash
+cd wave-os-hermes && git pull
+cp -r brainvault/. ~/.hermes/plugins/brainvault/
+```
+
+```powershell
+cd wave-os-hermes; git pull
+Copy-Item -Recurse -Force brainvault\* "$env:LOCALAPPDATA\hermes\plugins\brainvault\"
+```
+
+Copy the folder's **contents** (`brainvault\*`). If the plugin folder already exists, copying `brainvault` itself puts a second `brainvault` folder inside it, and Hermes keeps running the old version. Check with `hermes brainvault doctor`: the first line shows the version.
+
 ## The Wave | BrainVault Mint page (Hermes Desktop, Webapp and dashboard)
 
 ![Wave | BrainVault Mint in the Hermes Webapp](docs/wave-brainvault-webapp.png)
