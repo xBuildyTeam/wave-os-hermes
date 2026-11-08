@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -274,6 +274,21 @@ class Vault:
                                             target=target, trust=trust, private=private,
                                             source={"platform": "hermes", "created": _now_iso(), **(source or {})})
         return {"id": fp, "created": created, "private": private, "warnings": warnings}
+
+    def make_cards(self, cards: list, *, private=None, source: dict | None = None) -> dict:
+        """Save many memories at once (a pasted page split into cards). Each card is screened and size-checked alone."""
+        made, skipped = [], []
+        for i, c in enumerate(cards[:40]):
+            c = c if isinstance(c, dict) else {"text": str(c)}
+            try:
+                r = self.remember(str(c.get("text", "")), title=str(c.get("title") or ""), tags=c.get("tags"),
+                                  private=private, trust="agent", source=source)
+                made.append({"id": r.get("id"), "title": c.get("title") or "", "created": r.get("created", True)})
+            except VaultError as e:
+                skipped.append({"index": i, "title": c.get("title") or "", "reason": str(e)})
+        new = sum(1 for m in made if m["created"] is not False)
+        return {"made": new, "already_had": len(made) - new, "skipped": skipped, "cards": made,
+                "next": "Review and edit them on the Wave | BrainVault Mint page, then Send to Wave to mint in one approval."}
 
     def mirror_write(self, action: str, target: str, content: str, metadata: dict | None = None) -> None:
         """Mirror Hermes's built-in MEMORY.md / USER.md writes. Never raises."""

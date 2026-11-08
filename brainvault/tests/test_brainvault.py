@@ -348,3 +348,16 @@ def test_edit_before_mint_and_estimate(vault, monkeypatch):
     assert e["cards"] == 1 and e["approvals"] == 1 and 0.8 < e["tfuel"] < 1.6
     with pytest.raises(VaultError):
         vault.edit(vault.store.memories(states=("local",))[0]["fp"], text="api key sk-proj-" + "a" * 40, private=True)
+
+
+def test_make_cards_splits_a_page(vault):
+    r = vault.make_cards([
+        {"title": "Demo due", "text": "The Wave hackathon demo is due November 11 at 5 PM EST.", "tags": ["hackathon"]},
+        {"title": "Wave Web", "text": "Wave Web lives at web.oswave.io."},
+        {"title": "Bad", "text": "private key: 4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f362318"},
+        {"title": "Too long", "text": "x" * 2000},
+        {"title": "Demo due again", "text": "The Wave hackathon demo is due November 11 at 5 PM EST."},
+    ])
+    assert r["made"] == 2 and r["already_had"] == 1 and len(r["skipped"]) == 2
+    mems = vault.store.memories()
+    assert {m["title"] for m in mems} >= {"Demo due", "Wave Web"} and all(m["private"] for m in mems)
