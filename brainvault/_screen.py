@@ -28,7 +28,7 @@ _INJECT = re.compile(
 @lru_cache(maxsize=1)
 def _bip39() -> frozenset[str]:
     p = Path(__file__).with_name("bip39_english.txt")
-    return frozenset(w.strip() for w in p.read_text().split() if w.strip())
+    return frozenset(w.strip() for w in p.read_text(encoding="utf-8").split() if w.strip())
 
 
 def _has_seed_phrase(text: str) -> bool:

@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.4.1"
+VERSION = "0.4.2"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -63,8 +63,8 @@ def _hermes_config(hermes_home) -> dict | None:
     """Best-effort read of Hermes's config.yaml (memory.provider, plugins.enabled). None if unreadable."""
     p = Path(hermes_home) / "config.yaml"
     try:
-        text = p.read_text()
-    except OSError:
+        text = p.read_text(encoding="utf-8", errors="replace")  # Windows defaults to cp1252
+    except Exception:
         return None
     for loader in ("ruamel", "yaml"):
         try:
@@ -75,7 +75,39 @@ def _hermes_config(hermes_home) -> dict | None:
             return yaml.safe_load(text) or {}
         except Exception:
             continue
-    return None
+    return _tiny_yaml(text)
+
+
+def _tiny_yaml(text: str) -> dict:
+    """Last-resort reader for the two settings the doctor checks (memory.provider, plugins.enabled)."""
+    out: dict = {}
+    section, key = None, None
+    for raw in text.splitlines():
+        line = raw.split(" #", 1)[0].rstrip()
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        body = line.strip()
+        if indent == 0 and body.endswith(":"):
+            section, key = body[:-1], None
+            out.setdefault(section, {})
+            continue
+        if section is None:
+            continue
+        if body.startswith("- ") and key:
+            out[section].setdefault(key, [])
+            if isinstance(out[section][key], list):
+                out[section][key].append(body[2:].strip().strip("'\""))
+            continue
+        if ":" in body and indent > 0:
+            k, v = body.split(":", 1)
+            k, v = k.strip(), v.strip()
+            key = k
+            if v.startswith("[") and v.endswith("]"):
+                out[section][k] = [x.strip().strip("'\"") for x in v[1:-1].split(",") if x.strip()]
+            elif v:
+                out[section][k] = v.strip("'\"")
+    return out
 
 
 class Vault:
@@ -95,13 +127,13 @@ class Vault:
     # -- config --
     def _read_cfg(self) -> dict:
         try:
-            return json.loads(self.cfg_path.read_text())
+            return json.loads(self.cfg_path.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             return {}
 
     def save_cfg(self) -> None:
         tmp = self.cfg_path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.cfg, indent=2))
+        tmp.write_text(json.dumps(self.cfg, indent=2), encoding="utf-8")
         os.replace(tmp, self.cfg_path)
 
     def set_wallet(self, address: str) -> None:
@@ -137,7 +169,7 @@ class Vault:
             except Exception:
                 hexkey = None
         if not hexkey and (self.home / "agent.key").exists():
-            hexkey = (self.home / "agent.key").read_text().strip()
+            hexkey = (self.home / "agent.key").read_text(encoding="utf-8").strip()
         if not hexkey:
             return None
         self._key = _pv1.private_key_from_hex(hexkey)
@@ -154,7 +186,7 @@ class Vault:
                 pass
         p = self.home / "agent.key"
         fd = os.open(str(p), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with os.fdopen(fd, "w") as f:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(hexkey)
         self.cfg["key_store"] = "file"
         return "file"
@@ -293,7 +325,7 @@ class Vault:
         out_dir = self.home / "exports"
         out_dir.mkdir(exist_ok=True)
         path = out_dir / f"wave-migration-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
-        path.write_text(json.dumps(pack, indent=1, ensure_ascii=False))
+        path.write_text(json.dumps(pack, indent=1, ensure_ascii=False), encoding="utf-8")
         self.store.mark_exported([c["source"]["originalId"] for c in cards])
         out.update({"path": str(path), "review_url": f"{self.cfg['wave_web']}/build/migration/new?source=hermes"})
         return out
@@ -384,6 +416,14 @@ class Vault:
 
     def doctor(self) -> dict:
         """Check everything a demo needs, with a plain fix for each problem. Never raises."""
+        try:
+            return self._doctor()
+        except Exception as e:  # a broken check must never hide the others' answer
+            return {"version": VERSION, "ok": False, "problems": 1, "warnings": 0,
+                    "checks": [{"check": "Setup check", "ok": False, "detail": f"couldn't finish ({type(e).__name__}: {e})",
+                                "fix": "Send this line to Wave support."}]}
+
+    def _doctor(self) -> dict:
         checks = []
 
         def add(name, ok, detail, fix=""):

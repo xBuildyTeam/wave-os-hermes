@@ -310,3 +310,18 @@ def test_doctor_explains_fixes(vault, monkeypatch):
     assert by["Paired with Wave Wallet Mint"]["ok"] is True and by["Wallet address"]["ok"] is True
     from brainvault._core import format_doctor
     assert "setup check" in format_doctor(vault.doctor())
+
+
+def test_doctor_reads_utf8_hermes_config(tmp_path, monkeypatch):
+    # Windows reads files as cp1252 by default; Hermes writes config.yaml as UTF-8 (emoji, accents).
+    (tmp_path / "config.yaml").write_bytes("memory:\n  provider: brainvault  # 🧠 café\nplugins:\n  enabled: [brainvault]\n".encode("utf-8"))
+    from brainvault._core import _hermes_config
+    assert _hermes_config(tmp_path)["memory"]["provider"] == "brainvault"
+    v = Vault(tmp_path)
+    monkeypatch.setattr(_wave, "drop_take", lambda code, **kw: None)
+    monkeypatch.setattr(v.rpc, "block_number", lambda: 1)
+    by = {c["check"]: c for c in v.doctor()["checks"]}
+    assert by["Active memory provider"]["ok"] is True
+    monkeypatch.setattr(v, "_doctor", lambda: 1 / 0)
+    assert v.doctor()["checks"][0]["check"] == "Setup check"
+    v.store.close()
