@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -467,13 +467,39 @@ class Vault:
                 stats["public"] += 1
             self.store.upsert_card(c)
             stats["new"] += 1
-            for mem in exported:
-                if c.get("plain") and fingerprint(c["plain"].split("\n\n(from Hermes")[0]) == mem["fp"]:
-                    self.store.mark_minted(mem["fp"], c["ref"])
+        stats["matched"] = self.reconcile()
         if not truncated:
             self.store.set_meta("synced_block", str(indexed))
         self.store.set_meta("synced_at", str(time.time()))
         return stats
+
+    def reconcile(self) -> int:
+        """Mark local memories as minted when a readable vault card holds the same text.
+
+        Runs over ALL readable cards every sync (not only new ones), and tolerates what Wave Web may add around
+        the body: our provenance line, topic/tag lines, a CARD:/TITLE: header, whitespace and case."""
+        def norm(t: str) -> str:
+            t = (t or "").split("\n\n(from Hermes")[0]
+            keep = [ln for ln in t.splitlines()
+                    if not re.match(r"^\s*(CARD|TITLE|TOPICS?|TAGS?|SOURCE)\s*:", ln, re.I)
+                    and not re.match(r"^\s*(#[\w-]+\s*)+$", ln)]
+            return re.sub(r"\s+", " ", " ".join(keep)).strip().lower()
+        mems = self.store.memories(states=("local", "exported"))
+        if not mems:
+            return 0
+        cards = [c for c in self.store.cards(readable_only=True) if c.get("text")]
+        done = 0
+        for mem in mems:
+            body = norm(mem["body"])
+            if len(body) < 8:
+                continue
+            for c in cards:
+                plain = norm(c["text"])
+                if plain == body or (len(body) >= 24 and body in plain and len(plain) <= len(body) * 2 + 200):
+                    self.store.mark_minted(mem["fp"], c["ref"])
+                    done += 1
+                    break
+        return done
 
     def recall(self, query: str, k: int | None = None) -> list[dict]:
         return self.store.search(query, k or int(self.cfg["recall_k"]))

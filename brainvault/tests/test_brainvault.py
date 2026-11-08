@@ -254,7 +254,7 @@ def test_sync_opens_agent_cards_only(vault, monkeypatch):
                 "text": c["text"], "sha_ok": True}
     monkeypatch.setattr(_chain, "read_card", fake_read)
     st = vault.sync()
-    assert st == {"seen": 5, "new": 2, "opened": 1, "public": 1, "skipped_other": 1, "hash_failed": 0}
+    assert {k: v for k, v in st.items() if k != "matched"} == {"seen": 5, "new": 2, "opened": 1, "public": 1, "skipped_other": 1, "hash_failed": 0}
     assert {c["ref"] for c in vault.store.cards(readable_only=False)} == {"v3:300", "v3:301"}  # no bot or hidden cards
     assert vault.store.get_meta("synced_block") == "999"
     hits = vault.recall("mint green")
@@ -361,3 +361,15 @@ def test_make_cards_splits_a_page(vault):
     assert r["made"] == 2 and r["already_had"] == 1 and len(r["skipped"]) == 2
     mems = vault.store.memories()
     assert {m["title"] for m in mems} >= {"Demo due", "Wave Web"} and all(m["private"] for m in mems)
+
+
+def test_reconcile_marks_minted_even_with_wave_web_extras(vault):
+    r = vault.remember("The Wave hackathon demo is due November 11 at 5 PM EST.", title="Demo due", tags=["hackathon"])
+    vault.store.mark_exported([r["id"]])
+    vault.store.upsert_card({"ref": "v3:999", "id": 999, "creator": "0x" + "1" * 40, "isPrivate": True, "recipientId": None,
+                             "tags": ["user:memory"], "contentHash": "0x00", "block": 1,
+                             "plain": "CARD: Demo due\nThe Wave hackathon demo is due November 11 at 5 PM EST.\n\n(from Hermes · agent · 2026-11-07)\nTOPICS: hackathon",
+                             "opened": True, "sha_ok": True})
+    assert vault.reconcile() == 1
+    assert vault.store.memory(r["id"])["state"] == "minted"
+    assert vault.reconcile() == 0
