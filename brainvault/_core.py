@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.5.4"
+VERSION = "0.5.5"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -275,11 +275,16 @@ class Vault:
                                             source={"platform": "hermes", "created": _now_iso(), **(source or {})})
         return {"id": fp, "created": created, "private": private, "warnings": warnings}
 
-    def make_cards(self, cards: list, *, private=None, source: dict | None = None) -> dict:
-        """Save many memories at once (a pasted page split into cards). Each card is screened and size-checked alone."""
+    def make_cards(self, cards: list | None = None, *, text: str | None = None, private=None,
+                   source: dict | None = None) -> dict:
+        """Save many memories at once (a pasted page split into cards). The card rules in _cards are enforced here,
+        whatever the model sent: long cards are split, titles/tags cleaned, a raw page split by paragraph."""
+        from . import _cards
         made, skipped = [], []
-        for i, c in enumerate(cards[:40]):
-            c = c if isinstance(c, dict) else {"text": str(c)}
+        cards = _cards.normalize(cards, text)
+        if not cards:
+            raise VaultError("Nothing to turn into cards.")
+        for i, c in enumerate(cards):
             try:
                 r = self.remember(str(c.get("text", "")), title=str(c.get("title") or ""), tags=c.get("tags"),
                                   private=private, trust="agent", source=source)
@@ -287,7 +292,8 @@ class Vault:
             except VaultError as e:
                 skipped.append({"index": i, "title": c.get("title") or "", "reason": str(e)})
         new = sum(1 for m in made if m["created"] is not False)
-        return {"made": new, "already_had": len(made) - new, "skipped": skipped, "cards": made,
+        return {"tfuel_estimate": self.estimate([m["id"] for m in made if m.get("id")])["tfuel"] if made else 0,
+                "made": new, "already_had": len(made) - new, "skipped": skipped, "cards": made,
                 "next": "Review and edit them on the Wave | BrainVault Mint page, then Send to Wave to mint in one approval."}
 
     def mirror_write(self, action: str, target: str, content: str, metadata: dict | None = None) -> None:

@@ -383,3 +383,20 @@ def test_reconcile_with_markdown_title(vault):
                              "plain": "# Wave hackathon demo deadline\n\nThe Wave hackathon demo is due November 11 at 5 PM EST.\n\n(from Hermes · agent · 2026-11-07)\n\n#hackathon #deadline",
                              "opened": True, "sha_ok": True})
     assert vault.reconcile() == 1 and vault.store.memory(r["id"])["state"] == "minted"
+
+
+def test_card_rules_enforced_in_code(vault):
+    from brainvault import _cards
+    page = ("Turn this into Wave BrainVault Mint cards:\n\nPairing. Hermes pairs with Wave Wallet Mint once.\n\n"
+            "Short.\n\n" + "Recall works on any paired machine. " * 80)
+    cs = _cards.normalize(text=page)
+    assert all(len(c["text"].encode()) <= _cards.CARD_MAX_BYTES for c in cs)
+    assert not any("Turn this into" in c["text"] for c in cs)
+    assert cs[0]["title"] == "Pairing" and "Short." in cs[0]["text"]  # tiny paragraph merged
+    assert len(cs) >= 3                                               # long paragraph split
+    assert "(1/2)" in _cards.normalize([{"title": "Big", "text": "Recall works anywhere. " * 100}])[0]["title"]
+    assert _cards.clean_tags(["#User:Memory", "bot:x", "Wave OS", "Privacy", "theta", "x"]) == ["wave-os", "privacy", "theta"]
+    r = vault.make_cards(text=page)
+    assert r["made"] == len(cs) and r["tfuel_estimate"] > 0
+    with pytest.raises(VaultError):
+        vault.make_cards([], text="   ")
