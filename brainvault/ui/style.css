@@ -11,9 +11,11 @@
   background:conic-gradient(from 0deg,transparent,color-mix(in srgb,var(--bv-mint) 18%,transparent),transparent 40%);animation:bv-spin 18s linear infinite;pointer-events:none}
 @keyframes bv-spin{to{transform:rotate(360deg)}}
 .bv-top{display:flex;gap:18px;align-items:center;flex-wrap:wrap;position:relative;z-index:1}
-.bv-logo{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,var(--bv-teal),var(--bv-mint));
-  box-shadow:0 0 0 1px rgba(255,255,255,.08),0 8px 30px color-mix(in srgb,var(--bv-mint) 35%,transparent)}
-.bv-title{font-size:24px;font-weight:700;letter-spacing:-.3px;margin:0}
+.bv-logo{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;position:relative;background:#111a18;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--bv-mint) 30%,transparent),0 8px 30px color-mix(in srgb,var(--bv-mint) 28%,transparent)}
+.bv-logo svg{margin-top:-4px}
+.bv-logo-bar{position:absolute;left:9px;right:9px;bottom:6px;height:3px;border-radius:2px;background:#18d8ba}
+.bv-title{font-size:24px;font-weight:700;letter-spacing:-.3px;margin:0;display:flex;align-items:center;flex-wrap:wrap}
 .bv-sub{color:var(--bv-dim);margin-top:2px}
 .bv-sp{flex:1}
 .bv-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;position:relative;z-index:1}
@@ -108,7 +110,7 @@
 .bv-sendbar{position:sticky;bottom:0;display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--bv-line);
   background:color-mix(in srgb,var(--color-background,#041c1c) 88%,transparent);backdrop-filter:blur(6px)}
 @media (max-width:1000px){.bv-grid{grid-template-columns:1fr}.bv-stats{grid-template-columns:repeat(2,1fr)}.bv-flow{grid-template-columns:repeat(5,1fr)}}
-.bv .bv-wave{color:var(--bv-mint);font-weight:800}
+.bv .bv-wave{color:var(--bv-teal);font-weight:800}
 .bv .bv-pipe{color:var(--bv-dim);font-weight:400;margin:0 .35em}
 .bv .bv-doctor{margin:0 0 16px}
 .bv .bv-chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--bv-line)}
@@ -118,3 +120,6 @@
 .bv .bv-chk.warn .bv-chk-badge{background:color-mix(in srgb,#f5c86b 18%,transparent);color:#f5c86b}
 .bv .bv-chk.bad .bv-chk-badge{background:color-mix(in srgb,#ff8a8a 18%,transparent);color:#ff9a9a}
 .bv .bv-chk-fix{color:var(--bv-dim);font-size:12px;margin-top:2px}
+
+.bv .bv-mbadge{color:#7ef0ae;font-weight:700;font-size:12px;letter-spacing:.4px;border:1px solid #3fcf8255;background:#123826;border-radius:6px;
+  padding:2px 8px 2px 5px;display:inline-flex;align-items:center;gap:4px;margin-left:10px;line-height:18px;vertical-align:middle}

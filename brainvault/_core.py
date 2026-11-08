@@ -19,7 +19,7 @@ from pathlib import Path
 from . import _chain, _pv1, _screen, _wave
 from ._store import Store, fingerprint
 
-VERSION = "0.4.0"
+VERSION = "0.4.1"
 PRIVATE_BODY_MAX = 1800   # bytes, leaves room inside a PV1 card
 PUBLIC_BODY_MAX = 2000    # chars, Wave Web's import limit
 TAG_RE = re.compile(r"^[a-z0-9][a-z0-9:_.-]{0,39}$")
@@ -399,7 +399,7 @@ class Vault:
         except Exception:
             key = None
         if not a:
-            add("Paired with Wave Wallet Mint", False, "not paired", "Say 'pair Wave BrainVault with my wallet' or run /brainvault pair.")
+            add("Paired with Wave Wallet Mint", False, "not paired", "Say 'pair Wave BrainVault Mint with my wallet' or run /brainvault pair.")
         elif key is None:
             add("Paired with Wave Wallet Mint", False, f"paired as \"{a.get('label')}\" but the key is missing here",
                 "Run /brainvault pair again (and revoke the old key in Wave Wallet Mint › Settings › Agent keys).")
@@ -429,7 +429,7 @@ class Vault:
         if not w:
             add("Vault sync", "warn", "waiting for a wallet address", "Set your wallet, then run /brainvault sync.")
         elif age is None:
-            add("Vault sync", "warn", "never synced", "Run /brainvault sync (or press Sync in the Wave | BrainVault tab).")
+            add("Vault sync", "warn", "never synced", "Run /brainvault sync (or press Sync in the Wave | BrainVault Mint tab).")
         else:
             add("Vault sync", True if age < 3600 else "warn", f"{int(age // 60)} min ago", "Run /brainvault sync.")
         c = self.store.counts()
@@ -441,7 +441,7 @@ class Vault:
         add("Active memory provider", prov == "brainvault" if hermes_cfg else "warn", prov or "unknown",
             "Run: hermes config set memory.provider brainvault")
         enabled = ((hermes_cfg.get("plugins") or {}).get("enabled") or []) if hermes_cfg else []
-        add("Wave | BrainVault tab enabled", True if "brainvault" in enabled else "warn",
+        add("Wave | BrainVault Mint tab enabled", True if "brainvault" in enabled else "warn",
             "yes" if "brainvault" in enabled else "no",
             "Run: hermes plugins enable brainvault  (then open it in hermes dashboard, Hermes Desktop or the Webapp)")
         ok = not any(x["ok"] is False for x in checks)
@@ -478,7 +478,7 @@ def format_recall(hits: list[dict]) -> str:
 
 def format_doctor(r: dict) -> str:
     mark = {True: "OK  ", False: "FIX ", "warn": "NOTE"}
-    lines = [f"Wave | BrainVault {r['version']} setup check: " + ("all good" if r["ok"] and not r["warnings"] else
+    lines = [f"Wave | BrainVault Mint {r['version']} setup check: " + ("all good" if r["ok"] and not r["warnings"] else
              f"{r['problems']} to fix, {r['warnings']} notes")]
     for c in r["checks"]:
         lines.append(f"  {mark.get(c['ok'], '?   ')} {c['check']}: {c['detail']}")

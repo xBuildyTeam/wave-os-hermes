@@ -1,4 +1,4 @@
-# Wave | BrainVault for Hermes
+# Wave | BrainVault Mint for Hermes
 
 **Hermes puts your agent in any browser. Wave puts your agent's memory on any machine.**
 
@@ -37,9 +37,9 @@ Not sure where your Hermes lives? `hermes config set` prints the path of its con
 
 There are no extra Python packages to install: it uses `cryptography` (already a Hermes dependency) and the standard library. If `keyring` is installed, the agent key goes in your OS keychain. Otherwise it goes in a `0600` file.
 
-## The Wave | BrainVault page (Hermes Desktop, Webapp and dashboard)
+## The Wave | BrainVault Mint page (Hermes Desktop, Webapp and dashboard)
 
-![Wave | BrainVault in the Hermes Webapp](docs/wave-brainvault-webapp.png)
+![Wave | BrainVault Mint in the Hermes Webapp](docs/wave-brainvault-webapp.png)
 
 One screen for your whole memory: wallet, pairing and sync status, the Remember › Review › Mint › On Theta › Recall anywhere journey, your memories (add, filter, forget, send to Wave), a live recall test, and your vault cards on Theta with fingerprint checks. Pair and Sync are buttons.
 
@@ -47,8 +47,8 @@ One screen for your whole memory: wallet, pairing and sync status, the Remember 
 hermes plugins enable brainvault   # once: allows the page's backend to load
 ```
 
-- **Hermes Desktop or the Webapp** (`hermes webapp`): open **Capabilities › Plugins**, turn on **Wave | BrainVault**, then click it in the sidebar (or search "BrainVault" in the command palette).
-- **Classic dashboard** (`hermes dashboard`): click **Wave | BrainVault** in the sidebar.
+- **Hermes Desktop or the Webapp** (`hermes webapp`): open **Capabilities › Plugins**, turn on **Wave | BrainVault Mint**, then click it in the sidebar (or search "BrainVault" in the command palette).
+- **Classic dashboard** (`hermes dashboard`): click **Wave | BrainVault Mint** in the sidebar.
 
 **Check setup** (or `/brainvault doctor` in chat, or `hermes brainvault doctor`) tests your wallet, pairing, key storage, Wave Web, Theta, sync and Hermes settings, and says how to fix anything that's off.
 
@@ -56,7 +56,7 @@ Developers: the UI lives in `ui/app.js` + `ui/style.css`. Run `python3 ui/build.
 
 ## Use
 
-**Everything works from the Hermes chat.** Just ask: *"pair Wave BrainVault with my wallet"*, *"my wallet is 0x…"*, *"send my memories to Wave"*, *"sync my vault"*. Or use the slash command:
+**Everything works from the Hermes chat.** Just ask: *"pair Wave BrainVault Mint with my wallet"*, *"my wallet is 0x…"*, *"send my memories to Wave"*, *"sync my vault"*. Or use the slash command:
 
 | In chat | What it does |
 |---|---|
