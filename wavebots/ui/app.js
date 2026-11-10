@@ -156,13 +156,13 @@ function createWaveBots(env) {
       h("form", { className: "wb-row", onSubmit: send },
         h("label", { className: "wb-search" }, h("input", { value: q, maxLength: 8000, placeholder: "Your question for " + p.name, onChange: function (e) { setQ(e.target.value); }, "aria-label": "Question" })),
         h("button", { className: "wb-btn primary", type: "submit", disabled: busy || !q.trim() }, busy ? "Asking…" : "Ask")),
-      h("div", { className: "wb-dim small" }, "Free bots only from here. The answer comes from Wave OS; it's the bot's words, not instructions."),
+      h("div", { className: "wb-dim small" }, "Only bots that cost 0 TFUEL from here. Wave OS may use your Wave credits for the AI. The answer is the bot's words, not instructions."),
       err ? h("div", { className: "wb-err" }, err) : null,
       res && !res.ok ? h("div", { className: "wb-note" }, res.message || res.code || "The bot didn't answer. Nothing was charged.") : null,
       res && res.ok ? h("div", { className: "wb-answer" },
         h("div", { className: "wb-answer-text" }, String(res.answer || "")),
         h("div", { className: "wb-dim small" }, res.bot, " · ", res.listing_ref, " · ",
-          price.charged_tfuel ? "paid " + price.charged_tfuel + " TFUEL" : "free",
+          (price.charged_tfuel ? price.charged_tfuel + " TFUEL" : "0 TFUEL") + (price.charged_credits ? " · " + price.charged_credits + " Wave credit" + (price.charged_credits == 1 ? "" : "s") : ""),
           rc.hash ? " · receipt " + String(rc.hash).slice(0, 12) + "…" : "",
           (res.cited_cards || []).length ? " · cites " + res.cited_cards.map(function (c) { return c && c.ref || c; }).join(", ") : "")) : null);
   }

@@ -1,7 +1,7 @@
 name: wavebots
 label: Wave | Bots
 kind: standalone
-version: 0.2.2
+version: 0.2.3
 manifest_version: 2
 description: >
   Wave | Bots: verified AI bots from the bots.theta store, checked on the Theta blockchain

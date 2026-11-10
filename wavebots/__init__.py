@@ -46,7 +46,7 @@ _CONFIRM = {
     "add": "add a Wave bot to Hermes as a new bot (verified on Theta, runs on your AI with tools off)",
     "update": "update an added Wave bot to its newest listing",
     "remove": "delete an added Wave bot and its chat from Hermes",
-    "ask_wave": "ask the real bot on Wave OS (uses your Wave OS connection; free bots cost nothing)",
+    "ask_wave": "ask the real bot on Wave OS (uses your Wave OS connection; free bots cost 0 TFUEL; Wave OS may use your Wave credits for the AI)",
 }
 
 
@@ -133,10 +133,12 @@ def _fmt_answer(r: dict) -> str:
         return str(r.get("message") or r.get("code") or "The bot didn't answer. Nothing was charged.")
     p = r.get("price") or {}
     paid = p.get("charged_tfuel") or 0
+    cr = p.get("charged_credits") or 0
     rc = r.get("receipt") or {}
     lines = [str(r.get("answer") or "").strip(), "",
              f"From {r.get('bot')} ({r.get('listing_ref')}) on Wave OS · "
-             + (f"paid {paid:g} TFUEL" if paid else "free")
+             + f"{paid:g} TFUEL"
+             + (f" · {cr:g} Wave credit{'' if cr == 1 else 's'}" if cr else "")
              + (f" · receipt {str(rc.get('hash'))[:12]}…" if rc.get("hash") else "")]
     cites = [c.get("ref") if isinstance(c, dict) else str(c) for c in (r.get("cited_cards") or [])]
     if cites:

@@ -439,7 +439,7 @@ def test_ask_needs_connect_then_works_and_handles_revoke(wave):
 def test_ask_wave_tool_asks_for_approval_and_slash(wave):
     hook = wavebots._require_approval
     a = hook("wave_bots", {"action": "ask_wave", "bot": "checker", "question": "q"})
-    assert a and a["action"] == "approve" and "free bots cost nothing" in a["message"]
+    assert a and a["action"] == "approve" and "0 TFUEL" in a["message"] and "Wave credits" in a["message"]
     a = hook("wave_bots", {"action": "ask_wave", "bot": "tally", "max_price_tfuel": 0.5})
     assert "0.5 TFUEL" in a["message"]
     assert hook("wave_bots", {"action": "connection"}) is None
@@ -450,4 +450,4 @@ def test_ask_wave_tool_asks_for_approval_and_slash(wave):
     wave.approve(p["code"], _pv1.public_key_hex(p["key"]))
     _connect.take(p)
     out = wavebots._slash("ask checker is this right?")
-    assert "Checked: is this right?" in out and "free" in out and "v3:134" in out
+    assert "Checked: is this right?" in out and "0 TFUEL" in out and "v3:134" in out
