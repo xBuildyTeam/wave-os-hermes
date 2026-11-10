@@ -92,3 +92,4 @@
 .wb-plugins{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .wb-plugin{display:flex;flex-direction:column;gap:8px}.wb-plugin p{margin:0}.wb-plugin .wb-btn{align-self:flex-start}
 .wb-links{flex-wrap:wrap}
+.wb-about-intro a{color:var(--wb-teal-ink);font-weight:600}

@@ -8,7 +8,7 @@ import time
 from . import _profile as A
 from ._bots import BotError, catalog, summary, verify
 
-VERSION = "0.2.1"
+VERSION = "0.2.2"
 CATALOG_TTL = 3600
 RECHECK_AFTER = 24 * 3600
 _lock = threading.Lock()
