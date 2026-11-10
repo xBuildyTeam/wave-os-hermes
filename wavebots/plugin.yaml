@@ -1,0 +1,19 @@
+name: wavebots
+label: Wave | Bots
+kind: standalone
+version: 0.1.0
+manifest_version: 2
+description: >
+  Wave | Bots: verified AI bots from the bots.theta store, checked on the Theta blockchain
+  on your computer. Add one to Hermes and it becomes its own bot in your sidebar, with its
+  mascot, answering from its verified cards on your own AI with computer tools turned off.
+author: Wave OS (oswave.io)
+homepage: https://github.com/xBuildyTeam/wave-os-hermes
+license: MIT
+requires_hermes: ">=0.22.1"
+provides_tools:
+  - wave_bots
+provides_hooks:
+  - pre_tool_call
+tags: [bots, theta, blockchain, verified, profiles, desktop, wave]
+# No extra Python packages: standard library only (PyYAML ships with Hermes).
