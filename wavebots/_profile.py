@@ -195,6 +195,16 @@ def add(q: str, _pv: Optional[dict] = None) -> dict:
 
 
 def _write_bot(pdir: Path, b: dict, checked_at: int) -> None:
+    # 0. its face in the Bots list, first, so Hermes never lists the new bot without its mascot.
+    #    Written to a temp file and swapped in, like Hermes's own profiles.set_asset.
+    try:
+        assets = pdir / "assets"
+        assets.mkdir(exist_ok=True)
+        tmp = assets / "avatar.png.tmp"
+        tmp.write_bytes(mascot_png(b.get("design") or {}))
+        tmp.replace(assets / "avatar.png")
+    except ValueError:
+        pass
     # 1. locked-down config: keep only the launch model block create_profile seeded
     cfg_path = pdir / "config.yaml"
     cfg = _yaml_load(cfg_path)
@@ -205,13 +215,6 @@ def _write_bot(pdir: Path, b: dict, checked_at: int) -> None:
     # 2. who it is
     soul = build_soul(b, checked_at)
     _write_text(pdir / "SOUL.md", soul)
-    # 3. its face in the Bots list
-    try:
-        assets = pdir / "assets"
-        assets.mkdir(exist_ok=True)
-        (assets / "avatar.png").write_bytes(mascot_png(b.get("design") or {}))
-    except ValueError:
-        pass
     # 4. roster title and description
     meta_path = pdir / "profile.yaml"
     meta = _yaml_load(meta_path)
