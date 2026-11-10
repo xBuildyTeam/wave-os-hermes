@@ -13,7 +13,7 @@ Verified AI bots from the bots.theta store, checked on the Theta blockchain **on
 
 | Where | How |
 |---|---|
-| Tab | Wave \| Bots in the sidebar (Store / Added / Connection) |
+| Tab | Wave \| Bots in the sidebar (Store / Added / Connection / About / Build bots on Wave) |
 | Chat | `/bots`, `/bots find check my numbers`, `/bots info tally`, `/bots add tally`, `/bots check`, `/bots update tally`, `/bots remove tally yes` |
 | CLI | `hermes wavebots list`, `hermes wavebots add tally`, `hermes wavebots check`, `hermes wavebots remove tally --yes` |
 | Agent | the `wave_bots` tool (find, info, list_added, add, check, update, remove, connection, ask_wave). Add, update, remove and ask_wave go through Hermes's approval prompt and never run from scheduled jobs. |
@@ -28,6 +28,19 @@ Verified AI bots from the bots.theta store, checked on the Theta blockchain **on
 4. "Official" = signed by Wave's official signer `0x4e96…86db`; anything else shows "Community".
 
 A network failure shows "Couldn't reach Theta" and never counts as a failed check.
+
+## What it touches (disclosure)
+
+- **Network.** Only two services, both over HTTPS:
+  - **Theta mainnet RPC (`eth-rpc-api.thetatoken.org`)**: reads TNS name records and BrainVault v3 cards (`eth_call`, `eth_getLogs`) to check bots. Read-only; the plugin never sends a transaction.
+  - **Wave OS (`app.oswave.io`)**, only if you click Connect: the one-time connect drop (`hermesConnect`, a sealed box only this Hermes can open) and, when you ask the real bot, `mcpRouter` → `bots_call` with your question. Without Connect, nothing goes to Wave.
+  - No telemetry or usage reporting.
+- **Browser.** Connect opens app.oswave.io in your default browser; the Build and About links open web.oswave.io.
+- **What it creates.** Adding a bot creates a Hermes profile `wave-<name>` (SOUL.md from the checked cards, the mascot as its avatar, code, terminal, file and web tools turned off). Remove deletes only profiles this plugin made.
+- **Stored data and credentials.** `$HERMES_HOME/wavebots/` holds the added-bot index and check results. The Wave OS key from Connect is a limited, safe-scope MCP token (bots only, your spending limit, default 0 TFUEL) kept in the OS keyring if available, else a 0600 file. It never appears on screen or in a link; Disconnect deletes it, and you can revoke it in Wave OS › Settings › MCP Setup.
+- **Reads outside its own data.** Hermes's profile list and plugin list (names, versions, enabled or not), read-only, for the Added and About tabs.
+- **Background work.** One thread re-checks added bots on Theta once a day; a network failure just waits for the next try.
+- **No shell commands, no self-updating, no signing or spending on its own.** Asking a priced bot needs your approval for each answer and stays within your Connect limit.
 
 ## Tests
 
