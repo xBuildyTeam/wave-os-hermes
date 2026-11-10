@@ -162,3 +162,45 @@ def remove(body: BotIn):
             return _m("_profile").remove(body.bot)
     except _errors() as e:
         raise HTTPException(400, str(e))
+
+
+# ----------------------------------------------------------------------------- Connect to Wave OS --
+@router.get("/connect")
+def connect_state():
+    return _m("_connect").background_state()
+
+
+@router.post("/connect/start")
+def connect_start():
+    W = _m("_connect")
+    try:
+        return W.start_background()  # the page opens the link itself
+    except W.ConnectError as e:
+        raise HTTPException(502, str(e))
+
+
+@router.post("/connect/cancel")
+def connect_cancel():
+    _m("_connect").cancel_background()
+    return {"ok": True}
+
+
+@router.post("/disconnect")
+def disconnect():
+    W = _m("_connect")
+    W.cancel_background()
+    return W.disconnect()
+
+
+class AskIn(BaseModel):
+    bot: str = Field(min_length=1, max_length=120)
+    question: str = Field(min_length=1, max_length=8000)
+
+
+@router.post("/ask")
+def ask(body: AskIn):
+    W = _m("_connect")
+    try:
+        return W.ask(body.bot, body.question)  # free bots only from the page (max price 0)
+    except W.ConnectError as e:
+        raise HTTPException(400, str(e))

@@ -76,3 +76,8 @@
 @media (max-width:640px){.wb{padding:14px}.wb-hero{padding:18px;min-height:140px;background-position:70% center}.wb-hero h1{font-size:23px}
   .wb-col{min-width:0;width:100%}}
 @media (prefers-reduced-motion:reduce){.wb-tile{transition:none}.wb-tile:hover{transform:none}}
+.wb-ask{border-top:1px solid var(--wb-line);padding-top:14px;display:flex;flex-direction:column;gap:8px}
+.wb-ask.off{flex-direction:row;align-items:center;gap:10px;flex-wrap:wrap;color:var(--wb-dim)}
+.wb-answer{border:1px solid var(--wb-line);border-radius:12px;padding:12px 14px;background:var(--wb-hover);display:flex;flex-direction:column;gap:8px}
+.wb-answer-text{white-space:pre-wrap;word-break:break-word}
+.wb-conn{display:flex;flex-direction:column;gap:10px}.wb-conn .wb-btn{align-self:flex-start}
