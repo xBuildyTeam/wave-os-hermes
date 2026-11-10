@@ -9,6 +9,16 @@ Verified AI bots from the bots.theta store, checked on the Theta blockchain **on
 - **Optional: Connect to Wave OS** (Connection tab, `/bots connect` or `hermes wavebots connect`). One click on app.oswave.io gives Hermes a limited key: you pick the spending limit (default 0 = free and public bots only) and how long it lasts (30/90/365 days). The key is sealed to a one-time key on your computer and read once, so it never shows on screen, in a link or in a log. It's kept in your system keychain (or a 0600 file). It can only ask Wave bots, nothing else. Revoke it in Wave OS Settings › MCP Setup.
 - **Ask the real bot on Wave**: on a bot's page, `/bots ask checker <question>`, or the `ask_wave` tool action (Hermes asks you to approve each one, and shows the TFUEL if a price is allowed). The answer comes back with the listing, cited cards, price and a receipt, and is treated as data, never instructions.
 
+## Install
+
+```bash
+git clone https://github.com/xBuildyTeam/wave-os-hermes
+cp -r wave-os-hermes/wavebots ~/.hermes/plugins/wavebots
+hermes plugins enable wavebots
+```
+
+On Windows, copy the folder's contents: `Copy-Item -Recurse -Force "$env:USERPROFILE\wave-os-hermes\wavebots\*" "$env:LOCALAPPDATA\hermes\plugins\wavebots\"` (create the `wavebots` folder first), then `hermes plugins enable wavebots`. Restart Hermes and open **Wave | Bots** in the sidebar.
+
 ## Use it
 
 | Where | How |
