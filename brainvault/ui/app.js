@@ -549,8 +549,8 @@ function createWaveBrainVault(env) {
             " Reload this page to see what's new: press Ctrl+R (Cmd+R on a Mac), or refresh the browser tab.")) : null,
       data.versions && data.versions.restart_needed ? h("div", { className: "bv-update" }, ic.sync(),
         h("div", null, h("b", null, "Updated to " + data.versions.installed + "."),
-          " Hermes is still running " + (data.versions.chat && data.versions.chat !== data.versions.installed ? data.versions.chat : data.versions.page) +
-          " in the background. Fully quit Hermes (including the tray icon) and reopen it to finish the update.")) : null,
+          " Hermes last ran " + (data.versions.chat && data.versions.chat !== data.versions.installed ? data.versions.chat : data.versions.page) +
+          " in chat. If you haven't yet, fully quit Hermes (including the tray icon) and reopen it. Then send any chat message once, and this note goes away.")) : null,
       h(Doctor, { report: report, onClose: function () { setReport(null); } }),
       view === "about" ? h(About, { plugins: wplugins }) : h(React.Fragment, null,
       !s.wallet ? h(WalletBanner, { onSave: onWallet }) : null,
