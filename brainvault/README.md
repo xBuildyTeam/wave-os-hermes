@@ -60,6 +60,8 @@ Copy the folder's **contents** (`brainvault\*`). If the plugin folder already ex
 
 ![Wave | BrainVault Mint in the Hermes Webapp](docs/wave-brainvault-webapp.png)
 
+![One approval in Wave Wallet Mint mints every card in Wave Web](docs/wave-web-quick-mint.png)
+
 One screen for your whole memory: wallet, pairing and sync status, the Remember › Review › Mint › On Theta › Recall anywhere journey, your memories (add, filter, forget, send to Wave), a live recall test, and your vault cards on Theta with fingerprint checks. Pair and Sync are buttons.
 
 ```bash
