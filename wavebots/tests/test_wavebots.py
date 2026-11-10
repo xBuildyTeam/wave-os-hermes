@@ -306,3 +306,30 @@ def test_mascot_png_draws_the_design():
     assert mid == b"\xff\x00\x00\xff"
     with pytest.raises(ValueError):
         mascot_png({"kind": "svg"})
+
+
+# ----------------------------------------------------------------------------- dashboard API --
+def test_dashboard_api_add_check_remove(env):
+    fastapi = pytest.importorskip("fastapi")
+    pytest.importorskip("httpx")
+    import importlib.util
+    from fastapi.testclient import TestClient
+    spec = importlib.util.spec_from_file_location("wb_api_test", HERE.parent / "dashboard" / "plugin_api.py")
+    api = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(api)
+    api._m("_bots").Rpc = Replay  # the API loads its own copy of the package
+    app = fastapi.FastAPI()
+    app.include_router(api.router, prefix="/x")
+    c = TestClient(app)
+    pv = c.post("/x/preview", json={"bot": "checker"}).json()
+    assert pv["can_add"] and pv["profile"] == "wave-checker" and "terminal" in pv["disabled_toolsets"]
+    r = c.post("/x/add", json={"bot": "checker"})
+    assert r.status_code == 200 and r.json()["created"]
+    assert c.get("/x/added").json()["added"][0]["profile"] == "wave-checker"
+    assert c.post("/x/check", json={"bot": "wave-checker"}).json()["status"] == "verified"
+    assert c.post("/x/add", json={"bot": "v3:138"}).status_code == 400
+    assert c.post("/x/remove", json={"bot": "wave-checker"}).json()["ok"]
+    assert c.post("/x/remove", json={"bot": "wave-checker"}).status_code == 400
+    assert c.post("/x/add", json={"bot": ""}).status_code == 422
+    b = c.get("/x/banner").json()["data"]
+    assert b.startswith("data:image/jpeg;base64,")

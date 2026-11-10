@@ -7,7 +7,9 @@ MCP servers are off and nothing is scheduled. Its SOUL.md is built from the bot'
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import io
 import json
 import os
 import re
@@ -170,14 +172,16 @@ def add(q: str, _pv: Optional[dict] = None) -> dict:
         if not (pdir / MARKER).is_file():
             raise AddError(f"You already have a Hermes bot called {prof} that Wave | Bots didn't make, so it won't be touched.")
     else:
-        P.create_profile(name=prof, no_alias=True, no_skills=True, description=b["pitch"][:200] or None)
+        with contextlib.redirect_stdout(io.StringIO()):  # Hermes prints a summary; keep chat/CLI output clean
+            P.create_profile(name=prof, no_alias=True, no_skills=True, description=b["pitch"][:200] or None)
         created = True
     try:
         _write_bot(Path(P.get_profile_dir(prof)), b, v["checked_at"])
     except Exception:
         if created:
             try:
-                P.delete_profile(prof, yes=True)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    P.delete_profile(prof, yes=True)
             except Exception:
                 pass
         raise
@@ -285,7 +289,8 @@ def remove(q: str) -> dict:
     pdir = Path(P.get_profile_dir(rec["profile"]))
     if not (pdir / MARKER).is_file():
         raise AddError(f"{rec['profile']} wasn't made by Wave | Bots, so it won't be deleted from here.")
-    P.delete_profile(rec["profile"], yes=True)
+    with contextlib.redirect_stdout(io.StringIO()):
+        P.delete_profile(rec["profile"], yes=True)
     idx = _load_index()
     idx.pop(rec["profile"], None)
     _save_index(idx)
