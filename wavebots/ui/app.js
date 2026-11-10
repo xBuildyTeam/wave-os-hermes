@@ -5,7 +5,7 @@
  */
 function createWaveBots(env) {
   "use strict";
-  var React = env.React, h = React.createElement, call = env.call, open = env.open;
+  var React = env.React, h = React.createElement, call = env.call, open = env.open, go = env.go;
   var UI_VERSION = "__WB_UI_VERSION__";
   var useState = React.useState, useEffect = React.useEffect, useCallback = React.useCallback;
 
@@ -27,6 +27,8 @@ function createWaveBots(env) {
     link: function () { return I(["M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1", "M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"], 14); },
     sun: function () { return I(["M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8", "M12 2v2", "M12 20v2", "M2 12h2", "M20 12h2"], 16); },
     moon: function () { return I(["M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"], 16); },
+    info: function () { return I(["M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20", "M12 16v-4", "M12 8h.01"], 14); },
+    leaf: function () { return I(["M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z", "M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"], 14); },
   };
   function ago(ts) {
     if (!ts) return "never";
@@ -165,6 +167,54 @@ function createWaveBots(env) {
           (res.cited_cards || []).length ? " · cites " + res.cited_cards.map(function (c) { return c && c.ref || c; }).join(", ") : "")) : null);
   }
 
+  var DIFF = [
+    ["Checked on the blockchain, by you", "Every bot is a signed listing on the Theta blockchain. Before anything is added, this computer re-checks the whole chain: name → listing → rules → mascot → every knowledge card's fingerprint. No website or server has to be trusted, Wave's included."],
+    ["Nobody can quietly change it", "A minted listing can't be edited. A new version is a new listing that you choose to take (Update), and if your copy is edited here, the Added tab says so."],
+    ["Answers from cards, and cites them", "Each bot answers from its own knowledge cards, which are verified, permanent and public, and it names the card it used. It doesn't make up facts or browse the web for them."],
+    ["Safe to add", "Added bots have no terminal, files, browser, code, web, memory, scheduled jobs or MCP servers. They can only talk, so adding one can't touch your computer."],
+    ["Re-checked every day", "Added bots are checked on Theta again once a day. If one fails a check, it pauses itself until it passes again."],
+    ["Your AI, no account", "Added bots run on the AI model you already use in Hermes. No Wave account, key or payment. Connect Wave OS only if you want to ask the real bot on Wave, with a receipt."],
+    ["Bots that work as a team", "The official bots share one task format, so CHIEF can plan the job and hand the steps to Tally, Checker, Scribe and the rest."],
+    ["Owned names, clear signers", "Every bot has its own name on Theta (like checker.bots.theta). The official bots are signed by Wave's official signer. Anything else is labeled Community."],
+  ];
+  var WAVE_PLUGINS = [
+    { id: "wavebots", path: "/wavebots", name: "Wave | Bots", d: "Verified bots from the bots.theta store, checked on Theta on this computer and added to Hermes as real bots.",
+      get: "https://github.com/xBuildyTeam/wave-os-hermes/tree/wavebots/wavebots" },
+    { id: "brainvault", path: "/brainvault", name: "Wave | BrainVault Mint", d: "A memory you own: Hermes remembers on this computer first, and you mint what's worth keeping to your own vault on Theta, private by default.",
+      get: "https://oswave.io/hermes" },
+  ];
+  function WavePlugins(p) {
+    var st = p.state || {};
+    return h("div", { className: "wb-plugins" }, WAVE_PLUGINS.map(function (w) {
+      var s = st[w.id] || {}, here = w.id === p.self;
+      var chip = here ? h(Chip, { tone: "mint" }, "You're here") : s.enabled ? h(Chip, { tone: "ok", icon: ic.check() }, "Installed")
+        : s.installed ? h(Chip, { tone: "warn" }, "Turned off") : h(Chip, null, "Not installed");
+      var btn = here ? null : s.enabled ? h("button", { className: "wb-btn primary", onClick: function () { go(w.path); } }, "Open")
+        : s.installed ? h("span", { className: "wb-dim small" }, "Turn it on: hermes plugins enable " + w.id)
+        : h("button", { className: "wb-btn", onClick: function () { open(w.get); } }, ic.link(), "Get it");
+      return h("div", { key: w.id, className: "wb-card wb-plugin" },
+        h("div", { className: "wb-row" }, w.id === "brainvault" ? h("span", { className: "wb-leaf" }, ic.leaf()) : h("span", { className: "wb-leaf bots" }, ic.shield()), h("b", null, w.name), chip),
+        h("p", { className: "wb-dim" }, w.d), btn);
+    }));
+  }
+  function About(p) {
+    return h("div", { className: "wb-about" },
+      h("div", { className: "wb-card wb-about-intro" },
+        h("h2", null, "How Wave bots are different"),
+        h("p", null, "Most bot shelves are a list of prompts on someone's website. You can't tell who made a bot, what changed, or whether it's the same one you saw yesterday. A Wave bot is a signed listing on the Theta blockchain, and Hermes checks it on this computer before you use it.")),
+      h("div", { className: "wb-diff" }, DIFF.map(function (d, i) {
+        return h("div", { key: i, className: "wb-card wb-diff-card" }, h("div", { className: "wb-diff-n" }, String(i + 1)), h("h3", null, d[0]), h("p", null, d[1]));
+      })),
+      h("h2", { className: "wb-h2" }, "Wave plugins for Hermes"),
+      h(WavePlugins, { self: "wavebots", state: p.plugins }),
+      h("div", { className: "wb-row wb-links" },
+        h("button", { className: "wb-btn ghost", onClick: function () { open("https://bots.oswave.io"); } }, ic.link(), "bots.oswave.io"),
+        h("button", { className: "wb-btn ghost", onClick: function () { open("https://app.oswave.io"); } }, ic.link(), "Wave OS"),
+        h("button", { className: "wb-btn ghost", onClick: function () { open("https://web.oswave.io"); } }, ic.link(), "Wave Web"),
+        h("button", { className: "wb-btn ghost", onClick: function () { open("https://www.thetatoken.org"); } }, ic.link(), "Theta Network")),
+      h("p", { className: "wb-dim small" }, "Links open in your browser. Theta Network and Hermes (Nous Research) are independent projects; Wave OS isn't affiliated with them."));
+  }
+
   function Added(p) {
     var rows = p.rows;
     if (!rows.length) return h("div", { className: "wb-card wb-empty" }, h("b", null, "No Wave bots added yet."),
@@ -243,6 +293,9 @@ function createWaveBots(env) {
     }
     function cancelConnect() { call("/connect/cancel", {}).then(loadConn, fail); }
     var connected = !!(conn && conn.connection && conn.connection.connected);
+    var ps = useState(null), plugins = ps[0], setPlugins = ps[1];
+    useEffect(function () { call("/wave-plugins").then(function (r) { setPlugins(r.plugins || {}); }, function () {}); }, []);
+    var bv = plugins && plugins.brainvault && plugins.brainvault.enabled;
 
     var load = useCallback(function (refresh) {
       return Promise.all([call("/bots" + (refresh ? "?refresh=true" : "")), call("/added")]).then(function (r) {
@@ -290,6 +343,7 @@ function createWaveBots(env) {
     var body;
     if (openQ) body = h(BotPage, { q: openQ, version: version, onAdd: startAdd, connected: connected, onConnect: connect });
     else if (tab === "added") body = h(Added, { rows: added, avatars: avatars, busy: busy, onAct: act });
+    else if (tab === "about") body = h(About, { plugins: plugins });
     else if (tab === "connect") body = h(Connection, { state: conn, busy: busy, onConnect: connect, onDisconnect: disconnect, onCancel: cancelConnect });
     else body = h(React.Fragment, null,
       h("div", { className: "wb-row" },
@@ -306,10 +360,12 @@ function createWaveBots(env) {
             h("h1", null, h("span", { className: "wb-wave" }, "Wave"), " | Bots"),
             h("p", null, "Verified bots from the bots.theta store. Checked on the Theta blockchain, on this computer."),
             h("div", { className: "wb-tile-chips" }, h(Chip, { tone: "ok", icon: ic.shield() }, "Checked on Theta"), h(Chip, null, "Runs on your AI"), connected ? h(Chip, { tone: "mint", icon: ic.check() }, "Wave OS connected") : h(Chip, null, "No account needed"))),
-          h("button", { className: "wb-icon", onClick: function () { setTheme(theme === "dark" ? "light" : "dark"); }, "aria-label": "Switch theme" }, theme === "dark" ? ic.sun() : ic.moon())),
+          h("div", { className: "wb-hero-actions" },
+            bv ? h("button", { className: "wb-btn", onClick: function () { go("/brainvault"); }, title: "Open Wave | BrainVault Mint" }, h("span", { className: "wb-leaf sm" }, ic.leaf()), "BrainVault Mint") : null,
+            h("button", { className: "wb-icon", onClick: function () { setTheme(theme === "dark" ? "light" : "dark"); }, "aria-label": "Switch theme" }, theme === "dark" ? ic.sun() : ic.moon()))),
         h("nav", { className: "wb-tabs", role: "tablist" },
           openQ ? h("button", { className: "wb-tab", onClick: function () { setOpenQ(null); } }, ic.back(), "Back") : null,
-          [["store", "Store"], ["added", "Added (" + added.length + ")"], ["connect", "Connection"]].map(function (t) {
+          [["store", "Store"], ["added", "Added (" + added.length + ")"], ["connect", "Connection"], ["about", "About"]].map(function (t) {
             return h("button", { key: t[0], role: "tab", "aria-selected": !openQ && tab === t[0], className: "wb-tab" + (!openQ && tab === t[0] ? " on" : ""),
               onClick: function () { setOpenQ(null); setTab(t[0]); } }, t[1]);
           }),

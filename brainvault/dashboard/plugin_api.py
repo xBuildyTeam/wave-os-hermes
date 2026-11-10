@@ -292,3 +292,33 @@ def pair():
     threading.Thread(target=wait, name="brainvault-dashboard-pair", daemon=True).start()
     with _pair_lock:
         return dict(_pair)
+
+
+# ----------------------------------------------------------------------------- other Wave plugins --
+WAVE_PLUGIN_IDS = ("brainvault", "wavebots")
+
+
+@router.get("/wave-plugins")
+def wave_plugins():
+    """Which Wave plugins are installed and turned on here, so each tab can link to the others."""
+    out = {k: {"installed": False, "enabled": False, "version": None} for k in WAVE_PLUGIN_IDS}
+    try:
+        from hermes_cli.plugins import discover_plugins, get_plugin_manager
+        discover_plugins()
+        rows = get_plugin_manager().list_plugins()
+        if not rows:
+            raise LookupError("no plugins discovered in this process")
+        for p in rows:
+            if p.get("name") in out:
+                out[p["name"]] = {"installed": True, "enabled": bool(p.get("enabled")) and not p.get("error"),
+                                  "version": p.get("version")}
+    except Exception:
+        try:
+            import os
+            home = Path(os.environ.get("HERMES_HOME") or (Path.home() / ".hermes"))
+            for k in WAVE_PLUGIN_IDS:
+                if (home / "plugins" / k / "plugin.yaml").exists():
+                    out[k] = {"installed": True, "enabled": True, "version": None}
+        except Exception:
+            pass
+    return {"plugins": out}

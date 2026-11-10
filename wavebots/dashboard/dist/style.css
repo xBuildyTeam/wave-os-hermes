@@ -81,3 +81,14 @@
 .wb-answer{border:1px solid var(--wb-line);border-radius:12px;padding:12px 14px;background:var(--wb-hover);display:flex;flex-direction:column;gap:8px}
 .wb-answer-text{white-space:pre-wrap;word-break:break-word}
 .wb-conn{display:flex;flex-direction:column;gap:10px}.wb-conn .wb-btn{align-self:flex-start}
+.wb-hero-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.wb-hero-actions .wb-icon{margin-left:0}
+.wb-leaf{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:8px;background:#111a18;color:#7fe6a6;flex:none}
+.wb-leaf.sm{width:20px;height:20px;border-radius:6px}.wb-leaf.bots{background:#0b1a24;color:#18d8ba}
+.wb-about{display:flex;flex-direction:column;gap:14px}
+.wb-about-intro h2,.wb-h2{margin:0 0 6px;font-size:19px}.wb-h2{margin-top:10px}.wb-about-intro p{margin:0;color:var(--wb-dim);max-width:820px}
+.wb-diff{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.wb-diff-card{display:flex;flex-direction:column;gap:6px}.wb-diff-card h3{margin:0;font-size:15px}.wb-diff-card p{margin:0;color:var(--wb-dim);font-size:13.5px;line-height:1.5}
+.wb-diff-n{width:24px;height:24px;border-radius:50%;background:var(--wb-hover);border:1px solid var(--wb-line);color:var(--wb-teal-ink);font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
+.wb-plugins{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.wb-plugin{display:flex;flex-direction:column;gap:8px}.wb-plugin p{margin:0}.wb-plugin .wb-btn{align-self:flex-start}
+.wb-links{flex-wrap:wrap}

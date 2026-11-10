@@ -29,8 +29,9 @@ DASHBOARD = NOTE + """(function () {
     });
   }
   function open(url) { return !!window.open(url, "_blank", "noopener"); }
+  function go(path) { window.location.assign(path); }
 """ + APP + """
-  window.__HERMES_PLUGINS__.register("brainvault", createWaveBrainVault({ React: SDK.React, call: call, open: open }));
+  window.__HERMES_PLUGINS__.register("brainvault", createWaveBrainVault({ React: SDK.React, call: call, open: open, go: go }));
 })();
 """
 
@@ -65,7 +66,8 @@ export default {
     const call = (path, body) =>
       ctx.rest(path, body === undefined ? {} : { method: 'POST', body }).catch(e => { throw new Error(errMsg(e)) })
     const open = url => { ctx.os.openExternal(url); return true }
-    const Page = createWaveBrainVault({ React, call, open })
+    const go = path => host.navigate(path)
+    const Page = createWaveBrainVault({ React, call, open, go })
 
     ctx.registerMany([
       { id: 'page', area: ROUTES_AREA, data: { path: '/brainvault' }, render: () => React.createElement(Page) },

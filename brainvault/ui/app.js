@@ -5,7 +5,7 @@
  */
 function createWaveBrainVault(env) {
   "use strict";
-  var React = env.React, h = React.createElement, call = env.call, open = env.open;
+  var React = env.React, h = React.createElement, call = env.call, open = env.open, go = env.go || function (p) { window.location.assign(p); };
   var UI_VERSION = "__BV_UI_VERSION__";
   var useState = React.useState, useEffect = React.useEffect, useCallback = React.useCallback, useRef = React.useRef;
 
@@ -44,6 +44,7 @@ function createWaveBrainVault(env) {
     edit: function () { return I(["M12 20h9", "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"], 14); },
     sun: function () { return I(["M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8", "M12 2v2", "M12 20v2", "M4.9 4.9l1.4 1.4", "M17.7 17.7l1.4 1.4", "M2 12h2", "M20 12h2", "M4.9 19.1l1.4-1.4", "M17.7 6.3l1.4-1.4"], 16); },
     moon: function () { return I(["M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"], 16); },
+    bots: function () { return I(["M12 8V4H8", "M4 8h16v12H4z", "M2 14h2", "M20 14h2", "M9 13v2", "M15 13v2"]); },
     info: function () { return I(["M12 2a10 10 0 1 0 0 20a10 10 0 1 0 0-20", "M12 16v-4", "M12 8h.01"]); },
     back: function () { return I(["M19 12H5", "M12 19l-7-7 7-7"]); },
   };
@@ -399,8 +400,30 @@ function createWaveBrainVault(env) {
     { k: "Get TFUEL", t: "ThetaSwap", d: "The decentralized exchange of the Theta Network, built by OpenTheta. Swap Theta tokens from your own wallet, or buy TFUEL with a card to pay for minting.",
       links: [["thetaswap.org", "https://thetaswap.org"], ["Buy TFUEL", "https://thetaswap.org/buy/tfuel"]] },
   ];
+  var WAVE_PLUGINS = [
+    { id: "brainvault", path: "/brainvault", name: "Wave | BrainVault Mint", d: "A memory you own: Hermes remembers on this computer first, and you mint what's worth keeping to your own vault on Theta, private by default.",
+      get: "https://oswave.io/hermes" },
+    { id: "wavebots", path: "/wavebots", name: "Wave | Bots", d: "Verified bots from the bots.theta store, checked on the Theta blockchain on this computer and added to Hermes as real bots in your sidebar. Safe to add: they can only talk.",
+      get: "https://github.com/xBuildyTeam/wave-os-hermes/tree/wavebots/wavebots" },
+  ];
+  function WavePlugins(props) {
+    var st = props.state || {};
+    return h("div", { className: "bv-about" }, WAVE_PLUGINS.map(function (w) {
+      var s = st[w.id] || {}, here = w.id === "brainvault";
+      return h("div", { key: w.id, className: "bv-about-card" },
+        h("div", { className: "k" }, here ? "You're here" : s.enabled ? "Installed" : s.installed ? "Turned off" : "Not installed"),
+        h("h3", null, w.name), h("p", null, w.d),
+        h("div", { className: "links" },
+          here ? null : s.enabled ? h("button", { className: "bv-btn sm pri", onClick: function () { go(w.path); } }, "Open")
+            : s.installed ? h("span", { className: "bv-dim" }, "Turn it on: hermes plugins enable " + w.id)
+            : h(Link, { className: "bv-btn sm", href: w.get }, ic.link(), "Get it")));
+    }));
+  }
   function About(props) {
     return h("div", null,
+      h("h2", { className: "bv-about-h" }, "Wave plugins for Hermes"),
+      h(WavePlugins, { state: props.plugins }),
+      h("h2", { className: "bv-about-h" }, "About Wave"),
       h("div", { className: "bv-about-intro" },
         h("h2", null, "Hermes puts your agent in any browser. Wave puts your agent's memory on any machine."),
         h("p", null, "Wave | BrainVault Mint gives Hermes a memory you own. It's kept on this computer first, minted to your wallet's vault on Theta when you choose, and readable by any Hermes you pair. Nothing here can sign, spend or mint: every card goes through Wave Wallet Mint, where you see it first.")),
@@ -421,6 +444,8 @@ function createWaveBrainVault(env) {
     var _f = useState(null), fresh = _f[0], setFresh = _f[1];
     var _t = useTheme(), theme = _t[0], toggleTheme = _t[1];
     var _v = useState("home"), view = _v[0], setView = _v[1];
+    var _w = useState(null), wplugins = _w[0], setWplugins = _w[1];
+    useEffect(function () { call("/wave-plugins").then(function (r) { setWplugins(r.plugins || {}); }, function () {}); }, []);
     var _g = useState(null), report = _g[0], setReport = _g[1];
     var _k = useState(false), checking = _k[0], setChecking = _k[1];
     function onDoctor() {
@@ -508,6 +533,8 @@ function createWaveBrainVault(env) {
           view === "about"
             ? h("button", { className: "bv-btn", onClick: function () { setView("home"); } }, ic.back(), "Back")
             : h("button", { className: "bv-btn", onClick: function () { setView("about"); } }, ic.info(), "About"),
+          wplugins && wplugins.wavebots && wplugins.wavebots.enabled
+            ? h("button", { className: "bv-btn", onClick: function () { go("/wavebots"); }, title: "Open Wave | Bots" }, ic.bots(), "Wave | Bots") : null,
           h(Link, { className: "bv-btn", href: ww }, ic.link(), "Wave Web")),
         h("div", { className: "bv-chips" },
           h("span", { className: "bv-chip " + (s.wallet ? "ok" : "warn") }, h("span", { className: "bv-dot" + (s.wallet ? " on" : "") }), "Wallet ", h("b", null, data.wallet_short || "not set")),
@@ -525,7 +552,7 @@ function createWaveBrainVault(env) {
           " Hermes is still running " + (data.versions.chat && data.versions.chat !== data.versions.installed ? data.versions.chat : data.versions.page) +
           " in the background. Fully quit Hermes (including the tray icon) and reopen it to finish the update.")) : null,
       h(Doctor, { report: report, onClose: function () { setReport(null); } }),
-      view === "about" ? h(About) : h(React.Fragment, null,
+      view === "about" ? h(About, { plugins: wplugins }) : h(React.Fragment, null,
       !s.wallet ? h(WalletBanner, { onSave: onWallet }) : null,
       s.wallet && !s.paired ? h(PairBanner, { pairing: data.pairing, onPair: onPair, busy: busy }) : null,
       h(Stats, { s: s, mems: data.memories }),
