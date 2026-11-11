@@ -166,9 +166,11 @@ def remove(body: BotIn):
 
 # ----------------------------------------------------------------------------- Connect to Wave OS --
 @router.get("/connect")
-def connect_state():
-    # The key is a Hermes secret (WAVE_OS_TOKEN). This only reports whether it's set; it never returns it.
-    return {"state": "idle", "connection": _m("_connect").status()}
+def connect_state(verify: bool = False, force: bool = False):
+    # The key is a Hermes secret (WAVE_OS_TOKEN). This reports whether it's set and (verify) whether
+    # Wave OS accepts it; it never returns the key.
+    W = _m("_connect")
+    return {"state": "idle", "connection": W.verify(force=force) if verify else W.status()}
 
 
 @router.post("/connect/start")

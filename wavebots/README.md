@@ -43,7 +43,7 @@ A network failure shows "Couldn't reach Theta" and never counts as a failed chec
 
 - **Network.** Only two services, both over HTTPS:
   - **Theta mainnet RPC (`eth-rpc-api.thetatoken.org`)**: reads TNS name records and BrainVault v3 cards (`eth_call`, `eth_getLogs`) to check bots. Read-only; the plugin never sends a transaction.
-  - **Wave OS (`app.oswave.io`)**, only if you've set a Wave OS bot key and ask the real bot: `mcpRouter` → `bots_call` with your question and the key as a Bearer token. Without a key, nothing goes to Wave.
+  - **Wave OS (`app.oswave.io`)**, only if you've set a Wave OS bot key: `mcpRouter` → `bots_call` with your question when you ask the real bot, and a free `bots_discover` check (at most every 10 minutes, or when you click Check again) when the Connection tab shows whether Wave OS accepts the key. The key goes as a Bearer token. Without a key, nothing goes to Wave.
   - No telemetry or usage reporting.
 - **Browser.** "Get a key on Wave OS" opens app.oswave.io in your default browser; the Build and About links open web.oswave.io.
 - **What it creates.** Adding a bot creates a Hermes profile `wave-<name>` (SOUL.md from the checked cards, the mascot as its avatar, code, terminal, file and web tools turned off). Remove deletes only profiles this plugin made.

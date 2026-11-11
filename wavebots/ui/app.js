@@ -275,12 +275,27 @@ function createWaveBots(env) {
     var c = p.state || {}, conn = c.connection || {};
     var settings = conn.settings || "Hermes Settings › Plugins › wavebots › Wave OS bot key";
     var cli = conn.cli || "hermes config set WAVE_OS_TOKEN <key>";
-    var body;
-    if (conn.connected) body = h(React.Fragment, null,
-      h("div", { className: "wb-row" }, h(Chip, { tone: "ok", icon: ic.check() }, "Connected"), h("b", null, "Wave OS bot key is set in Hermes")),
-      h("p", { className: "wb-dim" }, "Hermes keeps the key with its other secrets; this plugin only reads it to ask Wave bots. It can only ask Wave bots, within the spending limit you picked. It can't change your files, apps, bots or wallet."),
+    var status, body;
+    if (p.checking && !p.state) status = h(Chip, null, ic.sync(), "Checking…");
+    else if (c.error) status = h(Chip, { tone: "warn" }, "Couldn't check");
+    else if (conn.connected && conn.verified) status = h(Chip, { tone: "ok", icon: ic.check() }, "Connected");
+    else if (conn.connected && conn.verified === false) status = h(Chip, { tone: "warn" }, "Key set, not confirmed");
+    else if (conn.connected) status = h(Chip, { tone: "ok", icon: ic.check() }, "Key set");
+    else if (conn.revoked || conn.malformed) status = h(Chip, { tone: "bad", icon: ic.x() }, "Key not accepted");
+    else status = h(Chip, null, "Not connected");
+
+    if (c.error) body = h(React.Fragment, null,
+      h("div", { className: "wb-note" }, "This page couldn't reach the plugin to check your connection. Fully quit Hermes (in Task Manager, end every hermes and python process), then open it again."),
+      h("button", { className: "wb-btn ghost", onClick: p.onRefresh }, ic.sync(), "Check again"));
+    else if (conn.connected) body = h(React.Fragment, null,
+      conn.verified ? h("p", null, "Wave OS accepted your key", conn.checked_at ? " (checked " + new Date(conn.checked_at).toLocaleTimeString() + ")" : "", ". You can ask the real bot on Wave from any bot's page.")
+        : conn.verified === false ? h("div", { className: "wb-note" }, conn.check_error || "Couldn't confirm the key with Wave OS.")
+        : h("p", null, "Your Wave OS bot key is set in Hermes."),
+      h("p", { className: "wb-dim" }, "Hermes keeps the key with its other secrets; this plugin only reads it to ask Wave bots, within the spending limit you picked. It can't change your files, apps, bots or wallet."),
       h("p", { className: "wb-dim" }, "To disconnect, clear the key in ", settings, ". To cancel it on Wave's side too, revoke it in Wave OS Settings › MCP Setup."),
-      env.desktop ? h("button", { className: "wb-btn ghost", onClick: p.onSettings }, ic.link(), "Open Wave | Bots settings") : null);
+      h("div", { className: "wb-row" },
+        h("button", { className: "wb-btn ghost", onClick: p.onRefresh, disabled: p.checking }, ic.sync(), p.checking ? "Checking…" : "Check again"),
+        env.desktop ? h("button", { className: "wb-btn ghost", onClick: p.onSettings }, ic.link(), "Open wavebots settings") : null));
     else body = h(React.Fragment, null,
       conn.revoked ? h("div", { className: "wb-note" }, "Wave OS didn't accept your key (revoked or expired). Get a new one and paste it in Hermes.") : null,
       conn.malformed ? h("div", { className: "wb-note" }, "The Wave OS bot key in Hermes doesn't look right. Paste it again.") : null,
@@ -288,13 +303,14 @@ function createWaveBots(env) {
       h("ol", { className: "wb-list" },
         h("li", null, "Get a key on app.oswave.io: sign in, pick the spending limit (default: free and public bots only) and how long it lasts, then click Create key."),
         h("li", null, "Copy the key (Wave OS shows it once)."),
-        h("li", null, "Paste it in ", h("b", null, settings), ", or run ", h("code", null, cli), ".")),
+        h("li", null, "Paste it in ", h("b", null, settings), " and click Save settings, or run ", h("code", null, cli), "."),
+        h("li", null, "Fully quit and reopen Hermes so it loads the key, then come back here.")),
       h("div", { className: "wb-row" },
-        h("button", { className: "wb-btn primary", onClick: p.onConnect, disabled: p.busy }, ic.link(), "Get a key on Wave OS"),
+        h("button", { className: "wb-btn primary", onClick: p.onConnect }, ic.link(), "Get a key on Wave OS"),
         env.desktop ? h("button", { className: "wb-btn", onClick: p.onSettings }, "Paste it in Settings") : null,
-        h("button", { className: "wb-btn ghost", onClick: p.onRefresh }, ic.sync(), "Check again")),
-      h("p", { className: "wb-dim" }, "Still not connected after pasting? Restart Hermes so it loads the new key."));
-    return h("div", { className: "wb-card wb-conn" }, h("h3", null, "Connect to Wave OS"), body);
+        h("button", { className: "wb-btn ghost", onClick: p.onRefresh, disabled: p.checking }, ic.sync(), p.checking ? "Checking…" : "Check again")));
+    return h("div", { className: "wb-card wb-conn" },
+      h("div", { className: "wb-row" }, h("h3", null, "Connect to Wave OS"), status), body);
   }
 
   return function WaveBots() {
@@ -312,7 +328,13 @@ function createWaveBots(env) {
     var vs = useState(0), version = vs[0], setVersion = vs[1];
     var cs = useState(null), conn = cs[0], setConn = cs[1];
     var fail = function (e) { setErr(String((e && e.message) || e)); };
-    var loadConn = useCallback(function () { return call("/connect").then(setConn, function () {}); }, []);
+    var cks = useState(false), checking = cks[0], setChecking = cks[1];
+    var loadConn = useCallback(function (force) {
+      setChecking(true);
+      return call("/connect?verify=true" + (force === true ? "&force=true" : "")).then(
+        function (r) { setChecking(false); setConn(r); },
+        function () { setChecking(false); setConn({ error: true, connection: {} }); });
+    }, []);
     useEffect(function () { loadConn(); }, [loadConn]);
     function connect() {
       setTab("connect"); setOpenQ(null);
@@ -373,7 +395,7 @@ function createWaveBots(env) {
     else if (tab === "added") body = h(Added, { rows: added, avatars: avatars, busy: busy, onAct: act });
     else if (tab === "about") body = h(About, { plugins: plugins });
     else if (tab === "build") body = h(Build, { makerAdded: added.some(function (r) { return /^maker(\.|$)/.test(String(r.slug || r.tns || r.name || "").toLowerCase()); }), onMaker: function () { setOpenQ("maker"); } });
-    else if (tab === "connect") body = h(Connection, { state: conn, busy: busy, onConnect: connect, onSettings: openSettings, onRefresh: loadConn });
+    else if (tab === "connect") body = h(Connection, { state: conn, checking: checking, onConnect: connect, onSettings: openSettings, onRefresh: function () { loadConn(true); } });
     else body = h(React.Fragment, null,
       h("div", { className: "wb-row" },
         h("label", { className: "wb-search" }, ic.search(), h("input", { value: q, placeholder: "What do you need done? e.g. check my numbers", onChange: function (e) { setQ(e.target.value); }, "aria-label": "Search bots" })),
@@ -394,7 +416,7 @@ function createWaveBots(env) {
             h("button", { className: "wb-icon", onClick: function () { setTheme(theme === "dark" ? "light" : "dark"); }, "aria-label": "Switch theme" }, theme === "dark" ? ic.sun() : ic.moon()))),
         h("nav", { className: "wb-tabs", role: "tablist" },
           openQ ? h("button", { className: "wb-tab", onClick: function () { setOpenQ(null); } }, ic.back(), "Back") : null,
-          [["store", "Store"], ["added", "Added (" + added.length + ")"], ["connect", "Connection"], ["about", "About"], ["build", "Build bots on Wave"]].map(function (t) {
+          [["store", "Store"], ["added", "Added (" + added.length + ")"], ["connect", (connected ? "● " : "") + "Connection"], ["about", "About"], ["build", "Build bots on Wave"]].map(function (t) {
             return h("button", { key: t[0], role: "tab", "aria-selected": !openQ && tab === t[0], className: "wb-tab" + (!openQ && tab === t[0] ? " on" : ""),
               onClick: function () { setOpenQ(null); setTab(t[0]); } }, t[1]);
           }),

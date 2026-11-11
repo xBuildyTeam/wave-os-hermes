@@ -25,7 +25,7 @@ ENV = "WAVE_OS_TOKEN"
 KEY_URL = WAVE_OS + "/hermes/connect?mode=key"
 SETTINGS_HINT = "Hermes Settings › Plugins › wavebots › Wave OS bot key"
 CLI_HINT = "hermes config set WAVE_OS_TOKEN <key>"
-_UA = {"user-agent": "wave-bots-hermes/0.3.2", "accept": "application/json"}
+_UA = {"user-agent": "wave-bots-hermes/0.3.3", "accept": "application/json"}
 
 # Fingerprints of keys Wave OS refused in this process, so we stop sending them. Memory only.
 _refused: set = set()
@@ -84,6 +84,33 @@ def status() -> dict:
             "key_url": KEY_URL, "settings": SETTINGS_HINT, "cli": CLI_HINT}
 
 
+_checked: dict = {}   # key fingerprint -> {"ok": bool, "error": str, "at": float}. Memory only.
+CHECK_TTL_S = 600
+
+
+def verify(*, force: bool = False) -> dict:
+    """status() plus a real, free check that Wave OS accepts the key (bots_discover). Cached 10 min."""
+    import time as _t
+    st = status()
+    tok = _secret()
+    if not tok or not st.get("connected"):
+        return st
+    fp = _fp(tok)
+    hit = _checked.get(fp)
+    if force or not hit or _t.time() - hit["at"] > CHECK_TTL_S:
+        try:
+            _mcp("bots_discover", {"query": "checker"}, timeout=30)
+            hit = {"ok": True, "error": "", "at": _t.time()}
+        except ConnectError as e:
+            hit = {"ok": False, "error": str(e), "at": _t.time()}
+        _checked[fp] = hit
+        st = status()
+    st["verified"] = hit["ok"]
+    st["check_error"] = hit["error"]
+    st["checked_at"] = _t.strftime("%Y-%m-%dT%H:%M:%SZ", _t.gmtime(hit["at"]))
+    return st
+
+
 def connect_info() -> dict:
     """Where to get a key and where to put it. Nothing is stored here."""
     return {"url": KEY_URL, "settings": SETTINGS_HINT, "cli": CLI_HINT,
@@ -94,6 +121,7 @@ def connect_info() -> dict:
 
 def disconnect() -> dict:
     _refused.clear()
+    _checked.clear()
     return {"ok": True, "note": f"To disconnect, clear the Wave OS bot key in {SETTINGS_HINT}. "
                                 "To cancel it on Wave's side too, revoke it in Wave OS Settings › MCP Setup."}
 

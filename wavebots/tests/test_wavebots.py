@@ -353,6 +353,9 @@ class FakeWaveOS:
                 inner = {"ok": False, "code": "sign_in_required", "message": "revoked", "price": None}
             else:
                 a = body["params"]["arguments"]
+                if body["params"]["name"] == "bots_discover":
+                    inner = {"ok": True, "bots": [{"tns": "checker.bots.theta"}]}
+                    return 200, {"jsonrpc": "2.0", "id": body["id"], "result": {"content": [{"type": "text", "text": json.dumps(inner)}]}}
                 inner = {"ok": True, "answer": f"Checked: {a['question']}", "cited_cards": [{"ref": "v3:134"}],
                          "bot": "checker.bots.theta", "listing_ref": "v3:154", "untrusted": True,
                          "price": {"charged_tfuel": 0}, "receipt": {"id": "r1", "hash": "ab" * 32}, "secret_field": "x"}
@@ -431,3 +434,16 @@ def test_ask_wave_tool_asks_for_approval_and_slash(wave, secret):
     secret["v"] = JWT
     out = wavebots._slash("ask checker is this right?")
     assert "Checked: is this right?" in out and "0 TFUEL" in out and "v3:134" in out
+
+
+def test_verify_confirms_the_key_with_wave_os_and_caches(wave, secret):
+    _connect._checked.clear()
+    assert "verified" not in _connect.verify()                  # no key: nothing to check
+    secret["v"] = JWT
+    v = _connect.verify()
+    assert v["connected"] and v["verified"] and v["checked_at"] and JWT not in json.dumps(v)
+    n = len(wave.calls)
+    assert _connect.verify()["verified"] and len(wave.calls) == n   # cached
+    wave.revoked = True
+    v = _connect.verify(force=True)
+    assert v["verified"] is False and not v["connected"] and v["revoked"]
