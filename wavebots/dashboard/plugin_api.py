@@ -167,29 +167,18 @@ def remove(body: BotIn):
 # ----------------------------------------------------------------------------- Connect to Wave OS --
 @router.get("/connect")
 def connect_state():
-    return _m("_connect").background_state()
+    # The key is a Hermes secret (WAVE_OS_TOKEN). This only reports whether it's set; it never returns it.
+    return {"state": "idle", "connection": _m("_connect").status()}
 
 
 @router.post("/connect/start")
 def connect_start():
-    W = _m("_connect")
-    try:
-        return W.start_background()  # the page opens the link itself
-    except W.ConnectError as e:
-        raise HTTPException(502, str(e))
-
-
-@router.post("/connect/cancel")
-def connect_cancel():
-    _m("_connect").cancel_background()
-    return {"ok": True}
+    return {"state": "idle", **_m("_connect").connect_info()}
 
 
 @router.post("/disconnect")
 def disconnect():
-    W = _m("_connect")
-    W.cancel_background()
-    return W.disconnect()
+    return _m("_connect").disconnect()
 
 
 class AskIn(BaseModel):

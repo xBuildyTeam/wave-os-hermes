@@ -123,9 +123,9 @@ HELP = """Wave | Bots, verified bots from bots.theta:
   /bots check [bot]        re-check added bots on Theta
   /bots update <bot>       move an added bot to its newest listing
   /bots remove <bot> yes   delete an added bot and its chat
-  /bots connect            connect Wave OS (one click on app.oswave.io)
+  /bots connect            how to connect Wave OS (get a key on app.oswave.io, paste it in Hermes)
   /bots ask <bot> <question>   ask the real bot on Wave (free bots only)
-  /bots disconnect         forget the Wave OS key here"""
+  /bots disconnect         how to disconnect Wave OS"""
 
 
 def _fmt_answer(r: dict) -> str:
@@ -190,12 +190,12 @@ def _slash(raw_args: str, **_ctx) -> str:
         if cmd == "connect":
             st = W.status()
             if st.get("connected"):
-                return f"Already connected: {st.get('label')} (until {str(st.get('expires_at'))[:10]})."
-            r = W.start_background(_open_browser)
-            return ("Opening Wave OS to connect. Sign in, pick your limits and click Connect; Hermes finishes on its "
-                    f"own within 10 minutes. If the page didn't open: {r['url']}")
+                return "Wave OS is connected (your Wave OS bot key is set in Hermes)."
+            i = W.connect_info()
+            _open_browser(i["url"])
+            return ("To ask the real bot on Wave: 1) get a key at " + i["url"] + " (sign in, pick your limits, "
+                    "click Create key, copy it), 2) paste it in " + i["settings"] + ", or run: " + i["cli"] + ".")
         if cmd == "disconnect":
-            W.cancel_background()
             return W.disconnect()["note"]
         if cmd == "ask":
             if len(rest) < 2:
@@ -219,8 +219,8 @@ def _setup_cli(parser) -> None:
         p.add_argument("bot", nargs="?" if name in ("find", "check") else None, default="")
         if name == "remove":
             p.add_argument("--yes", action="store_true")
-    sub.add_parser("connect", help="Connect Wave OS (opens app.oswave.io)")
-    sub.add_parser("disconnect", help="Forget the Wave OS key here")
+    sub.add_parser("connect", help="How to connect Wave OS (get a key on app.oswave.io)")
+    sub.add_parser("disconnect", help="How to disconnect Wave OS")
     sub.add_parser("status", help="Is Wave OS connected?")
     pa = sub.add_parser("ask", help="Ask the real bot on Wave")
     pa.add_argument("bot")
@@ -231,18 +231,17 @@ def _handle_cli(args) -> None:
     act = getattr(args, "wb_action", None) or "list"
     try:
         if act == "connect":
-            p = W.start()
-            print("Open this link, sign in, pick your limits and click Connect:\n  " + p["url"])
-            _open_browser(p["url"])
-            print("Waiting for Wave OS (up to 10 minutes)…")
-            meta = W.wait(p)
-            print(f"Connected: {meta.get('label')}. Spending limit {meta.get('caps')}. Revoke any time in Wave OS Settings › MCP Setup.")
+            i = W.connect_info()
+            print("To ask the real bot on Wave OS:\n  1. Get a key: " + i["url"] + "\n     (sign in, pick your limits, click Create key, copy it)\n"
+                  "  2. Save it in Hermes:  " + i["cli"] + "\n     or paste it in " + i["settings"])
+            _open_browser(i["url"])
             return
         if act == "status":
             st = W.status()
-            print(f"Connected: {st.get('label')} until {str(st.get('expires_at'))[:10]}" if st.get("connected")
-                  else ("The Wave OS key expired or was revoked. Run: hermes wavebots connect" if st.get("expired") or st.get("revoked")
-                        else "Not connected. Run: hermes wavebots connect"))
+            print("Connected: your Wave OS bot key is set in Hermes." if st.get("connected")
+                  else ("Wave OS didn't accept the key (revoked or expired). Get a new one: hermes wavebots connect" if st.get("revoked")
+                        else ("The Wave OS bot key doesn't look right. Paste it again." if st.get("malformed")
+                              else "Not connected. Run: hermes wavebots connect")))
             return
         if act == "disconnect":
             print(W.disconnect()["note"])

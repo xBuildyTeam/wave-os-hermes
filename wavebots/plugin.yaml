@@ -1,7 +1,7 @@
 name: wavebots
 label: Wave | Bots
 kind: standalone
-version: 0.2.4
+version: 0.3.0
 manifest_version: 2
 description: >
   Wave | Bots: verified AI bots from the bots.theta store, checked on the Theta blockchain
@@ -15,5 +15,12 @@ provides_tools:
   - wave_bots
 provides_hooks:
   - pre_tool_call
+config_schema:
+  wave_os_token:
+    type: secret
+    env: WAVE_OS_TOKEN
+    label: "Wave OS bot key"
+    description: "Optional. Only needed to ask the real bot on Wave OS. Get one at app.oswave.io/hermes/connect (bots only, spending limit you pick, revocable). Browsing, checking and adding bots work without it."
+    required: false
 tags: [bots, theta, blockchain, verified, profiles, desktop, wave]
 # No extra Python packages: standard library only (PyYAML ships with Hermes).

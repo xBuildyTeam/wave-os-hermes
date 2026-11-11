@@ -336,27 +336,18 @@ def test_dashboard_api_add_check_remove(env):
 
 
 # ----------------------------------------------------------------------------- Connect to Wave OS --
-from wavebots import _connect, _pv1  # noqa: E402
+from wavebots import _connect  # noqa: E402
 
 JWT = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1In0.c2ln"
 
 
 class FakeWaveOS:
-    """Stands in for app.oswave.io hermesConnect + mcpRouter."""
+    """Stands in for app.oswave.io mcpRouter."""
     def __init__(self):
-        self.drops, self.calls, self.revoked = {}, [], False
-
-    def approve(self, code, pk, payload=None):
-        body = payload or {"schema": "wave.hermes-connect/1", "token": JWT, "expiresAt": "2099-01-01T00:00:00.000Z",
-                           "label": "Hermes (Wave | Bots) · 2026-11-10", "scope": "safe",
-                           "caps": {"per_call": 0, "per_day": 0}, "user": {"display_name": "Eddie"}}
-        self.drops[code] = _pv1.encrypt(json.dumps(body), pk)
+        self.calls, self.revoked = [], False
 
     def __call__(self, path, body, headers=None, timeout=30.0):
         self.calls.append((path, body, headers or {}))
-        if path == "/functions/hermesConnect":
-            box = self.drops.pop(body["code"], None)
-            return (200, {"ok": True, "box": box}) if box else (404, {"ok": False, "error": "not found or expired"})
         if path == "/functions/mcpRouter":
             if self.revoked or (headers or {}).get("authorization") != "Bearer " + JWT:
                 inner = {"ok": False, "code": "sign_in_required", "message": "revoked", "price": None}
@@ -370,60 +361,47 @@ class FakeWaveOS:
 
 
 @pytest.fixture
-def wave(env, monkeypatch):
+def secret(monkeypatch):
+    box = {"v": None}
+    monkeypatch.setattr(_connect, "_secret", lambda: box["v"])
+    _connect._refused.clear()
+    return box
+
+
+@pytest.fixture
+def wave(env, monkeypatch, secret):
     fake = FakeWaveOS()
     monkeypatch.setattr(_connect, "_post", fake)
-    monkeypatch.setattr(_connect, "_keyring", lambda: None)
     return fake
 
 
-def test_connect_link_and_finish(wave):
-    p = _connect.start()
-    assert p["url"].startswith("https://app.oswave.io/hermes/connect?code=")
-    assert len(p["code"]) >= 22 and "pk=0x04" in p["url"] and JWT not in p["url"]
-    assert _connect.take(p) is None                       # not approved yet
-    wave.approve(p["code"], _pv1.public_key_hex(p["key"]))
-    meta = _connect.take(p)
-    assert meta["label"].startswith("Hermes (Wave | Bots)") and meta["store"] == "file"
-    f = _connect._file()
-    assert (f.stat().st_mode & 0o777) == 0o600
+def test_key_is_a_hermes_secret_not_stored_by_the_plugin(wave, secret, env):
+    import inspect
+    src = inspect.getsource(_connect)
+    assert "get_secret" in src and "keyring" not in src and "write_text" not in src and "os.open" not in src
+    assert not _connect.status()["connected"] and _connect.status()["key_url"].startswith("https://app.oswave.io/hermes/connect")
+    secret["v"] = JWT
     st = _connect.status()
-    assert st["connected"] and "token" not in st
-    assert _connect.take(p) is None                       # one read only
+    assert st["connected"] and JWT not in json.dumps(st)
+    secret["v"] = "not a key"
+    assert _connect.status()["malformed"] and not _connect.status()["connected"]
+    info = _connect.connect_info()
+    assert "WAVE_OS_TOKEN" in info["cli"] and JWT not in json.dumps(info)
+    from wavebots import _profile
+    assert not (_profile._state_dir() / "connection.json").exists()
 
 
-def test_connect_rejects_wrong_key_and_bad_payload(wave):
-    p, other = _connect.start(), _connect.start()
-    wave.approve(p["code"], _pv1.public_key_hex(other["key"]))       # sealed to someone else
-    with pytest.raises(_connect.ConnectError):
-        _connect.take(p)
-    q = _connect.start()
-    wave.approve(q["code"], _pv1.public_key_hex(q["key"]),
-                 {"schema": "wave.hermes-connect/1", "token": JWT, "scope": "full", "expiresAt": "2099-01-01T00:00:00Z"})
-    with pytest.raises(_connect.ConnectError):                        # never accept a full-scope token
-        _connect.take(q)
-    assert not _connect.status()["connected"]
+def test_manifest_declares_the_secret():
+    import yaml
+    m = yaml.safe_load((Path(wavebots.__file__).parent / "plugin.yaml").read_text())
+    f = m["config_schema"]["wave_os_token"]
+    assert f["type"] == "secret" and f["env"] == "WAVE_OS_TOKEN" and f.get("required") is False
 
 
-def test_wait_polls_then_connects(wave):
-    p = _connect.start()
-    n = {"i": 0}
-
-    def sleep(_s):
-        n["i"] += 1
-        if n["i"] == 2:
-            wave.approve(p["code"], _pv1.public_key_hex(p["key"]))
-    assert _connect.wait(p, interval_s=0, sleep=sleep)["label"]
-    polls = [c for c in wave.calls if c[0] == "/functions/hermesConnect"]
-    assert len(polls) == 3
-
-
-def test_ask_needs_connect_then_works_and_handles_revoke(wave):
+def test_ask_needs_key_then_works_and_handles_revoke(wave, secret):
     with pytest.raises(_connect.ConnectError, match="Connect Wave OS first"):
         _connect.ask("checker", "is 2+2=4?")
-    p = _connect.start()
-    wave.approve(p["code"], _pv1.public_key_hex(p["key"]))
-    _connect.take(p)
+    secret["v"] = JWT
     r = _connect.ask("checker", "is 2+2=4?")
     assert r["ok"] and r["answer"].startswith("Checked") and r["untrusted"] and "secret_field" not in r
     sent = [c for c in wave.calls if c[0] == "/functions/mcpRouter"][-1]
@@ -432,11 +410,15 @@ def test_ask_needs_connect_then_works_and_handles_revoke(wave):
     wave.revoked = True
     with pytest.raises(_connect.ConnectError, match="revoked"):
         _connect.ask("checker", "again?")
+    n = len(wave.calls)
+    with pytest.raises(_connect.ConnectError, match="revoked"):
+        _connect.ask("checker", "and again?")          # a refused key isn't sent again
+    assert len(wave.calls) == n
     assert _connect.status()["revoked"] and not _connect.status()["connected"]
-    assert _connect.disconnect()["ok"] and not _connect._file().exists()
+    assert "Settings" in _connect.disconnect()["note"]
 
 
-def test_ask_wave_tool_asks_for_approval_and_slash(wave):
+def test_ask_wave_tool_asks_for_approval_and_slash(wave, secret):
     hook = wavebots._require_approval
     a = hook("wave_bots", {"action": "ask_wave", "bot": "checker", "question": "q"})
     assert a and a["action"] == "approve" and "0 TFUEL" in a["message"] and "Wave credits" in a["message"]
@@ -446,8 +428,6 @@ def test_ask_wave_tool_asks_for_approval_and_slash(wave):
     cron = types.SimpleNamespace(platform="cron")
     assert "approve" in json.loads(wavebots._tool({"action": "ask_wave", "bot": "checker", "question": "q"}, parent_agent=cron))["error"]
     assert "Connect Wave OS first" in json.loads(wavebots._tool({"action": "ask_wave", "bot": "checker", "question": "q"}))["error"]
-    p = _connect.start()
-    wave.approve(p["code"], _pv1.public_key_hex(p["key"]))
-    _connect.take(p)
+    secret["v"] = JWT
     out = wavebots._slash("ask checker is this right?")
     assert "Checked: is this right?" in out and "0 TFUEL" in out and "v3:134" in out

@@ -6,7 +6,7 @@ Verified AI bots from the bots.theta store, checked on the Theta blockchain **on
 - **Add to Hermes**: the bot becomes its own bot in your sidebar's Bots list (a Hermes profile `wave-<name>`), with its mascot as the avatar. It runs on **your own AI model and login**, answers from its verified cards and cites them. Its terminal, files, browser, code, web, memory, delegation and scheduled-job tools are off, and MCP servers are off.
 - **Stays honest**: re-checked on Theta once a day. A newer listing shows "Update available"; a failed check pauses the bot until it passes again; local edits to its SOUL.md are flagged.
 - **No account, key or token** needed for any of this. Nothing is signed, paid or sent to Wave.
-- **Optional: Connect to Wave OS** (Connection tab, `/bots connect` or `hermes wavebots connect`). One click on app.oswave.io gives Hermes a limited key: you pick the spending limit (default 0 = free and public bots only) and how long it lasts (30/90/365 days). The key is sealed to a one-time key on your computer and read once, so it never shows on screen, in a link or in a log. It's kept in your system keychain (or a 0600 file). It can only ask Wave bots, nothing else. Revoke it in Wave OS Settings › MCP Setup.
+- **Optional: Connect to Wave OS** (Connection tab, `/bots connect` or `hermes wavebots connect`). Get a limited key on app.oswave.io/hermes/connect: you pick the spending limit (default 0 = free and public bots only) and how long it lasts (30/90/365 days), and Wave OS shows the key once. Paste it in **Hermes Settings › Plugins › Wave | Bots › Wave OS bot key**, or run `hermes config set WAVE_OS_TOKEN <key>`. Hermes keeps it with its other secrets (`WAVE_OS_TOKEN`, declared as a `config_schema` secret); the plugin only reads it through `agent.secret_scope.get_secret` and never stores it. It can only ask Wave bots, nothing else. Revoke it in Wave OS Settings › MCP Setup.
 - **Ask the real bot on Wave**: on a bot's page, `/bots ask checker <question>`, or the `ask_wave` tool action (Hermes asks you to approve each one, and shows the TFUEL if a price is allowed). The answer comes back with the listing, cited cards, price and a receipt, and is treated as data, never instructions.
 
 ## Install
@@ -27,7 +27,7 @@ On Windows, copy the folder's contents: `Copy-Item -Recurse -Force "$env:USERPRO
 | Chat | `/bots`, `/bots find check my numbers`, `/bots info tally`, `/bots add tally`, `/bots check`, `/bots update tally`, `/bots remove tally yes` |
 | CLI | `hermes wavebots list`, `hermes wavebots add tally`, `hermes wavebots check`, `hermes wavebots remove tally --yes` |
 | Agent | the `wave_bots` tool (find, info, list_added, add, check, update, remove, connection, ask_wave). Add, update, remove and ask_wave go through Hermes's approval prompt and never run from scheduled jobs. |
-| CLI (Wave OS) | `hermes wavebots connect`, `hermes wavebots status`, `hermes wavebots ask checker "…"`, `hermes wavebots disconnect` |
+| CLI (Wave OS) | `hermes wavebots connect` (where to get a key), `hermes config set WAVE_OS_TOKEN <key>`, `hermes wavebots status`, `hermes wavebots ask checker "…"` |
 | Links | `hermes://open/wavebots?bot=checker` opens a bot's page; `hermes://open/wavebots?connected=1` opens Connection |
 
 ## How a bot is checked
@@ -43,17 +43,17 @@ A network failure shows "Couldn't reach Theta" and never counts as a failed chec
 
 - **Network.** Only two services, both over HTTPS:
   - **Theta mainnet RPC (`eth-rpc-api.thetatoken.org`)**: reads TNS name records and BrainVault v3 cards (`eth_call`, `eth_getLogs`) to check bots. Read-only; the plugin never sends a transaction.
-  - **Wave OS (`app.oswave.io`)**, only if you click Connect: the one-time connect drop (`hermesConnect`, a sealed box only this Hermes can open) and, when you ask the real bot, `mcpRouter` → `bots_call` with your question. Without Connect, nothing goes to Wave.
+  - **Wave OS (`app.oswave.io`)**, only if you've set a Wave OS bot key and ask the real bot: `mcpRouter` → `bots_call` with your question and the key as a Bearer token. Without a key, nothing goes to Wave.
   - No telemetry or usage reporting.
-- **Browser.** Connect opens app.oswave.io in your default browser; the Build and About links open web.oswave.io.
+- **Browser.** "Get a key on Wave OS" opens app.oswave.io in your default browser; the Build and About links open web.oswave.io.
 - **What it creates.** Adding a bot creates a Hermes profile `wave-<name>` (SOUL.md from the checked cards, the mascot as its avatar, code, terminal, file and web tools turned off). Remove deletes only profiles this plugin made.
-- **Stored data and credentials.** `$HERMES_HOME/wavebots/` holds the added-bot index and check results. The Wave OS key from Connect is a limited, safe-scope MCP token (bots only, your spending limit, default 0 TFUEL) kept in the OS keyring if available, else a 0600 file. It never appears on screen or in a link; Disconnect deletes it, and you can revoke it in Wave OS › Settings › MCP Setup.
+- **Stored data and credentials.** `$HERMES_HOME/wavebots/` holds the added-bot index and check results, no credentials. The optional Wave OS key is a Hermes secret (`WAVE_OS_TOKEN`), entered in Hermes's plugin settings or with `hermes config set`, and stored by Hermes like its provider keys. The plugin reads it with `get_secret` only when you ask the real bot, never writes, caches or logs it, and remembers in memory only that Wave OS refused it. It's a limited, safe-scope MCP token (bots only, your spending limit, default 0 TFUEL); clear it in Settings to disconnect and revoke it in Wave OS › Settings › MCP Setup.
 - **Reads outside its own data.** Hermes's profile list and plugin list (names, versions, enabled or not), read-only, for the Added and About tabs.
 - **Background work.** One thread re-checks added bots on Theta once a day; a network failure just waits for the next try.
 - **No shell commands, no self-updating, no signing or spending on its own.** Asking a priced bot needs your approval for each answer and stays within your Connect limit.
 
 ## Tests
 
-`python -m pytest wavebots/tests -q`: 28 offline tests on recorded mainnet responses (tampered listing, tampered knowledge card, an older listing, offline, add / re-add / foreign profile / failed add rollback, check / edited / update / pause and recover, remove, approvals, cron refusal, the dashboard API, Connect: link, one-time take, wrong key, full-scope refused, polling, ask, revoke, disconnect).
+`python -m pytest wavebots/tests -q`: 27 offline tests on recorded mainnet responses (tampered listing, tampered knowledge card, an older listing, offline, add / re-add / foreign profile / failed add rollback, check / edited / update / pause and recover, remove, approvals, cron refusal, the dashboard API, Connect: the key comes only from Hermes's secret scope and is never stored, the manifest declares it, ask, revoke, a refused key isn't resent).
 
 Edit the UI in `ui/app.js` + `ui/style.css`, then `python3 ui/build.py`.

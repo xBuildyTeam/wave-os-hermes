@@ -64,7 +64,7 @@ export default {
       ctx.rest(path, body === undefined ? {} : { method: 'POST', body }).catch(e => { throw new Error(errMsg(e)) })
     const open = url => { ctx.os.openExternal(url); return true }
     const go = path => host.navigate(path)
-    const Page = createWaveBots({ React, call, open, go })
+    const Page = createWaveBots({ React, call, open, go, desktop: true })
 
     ctx.registerMany([
       { id: 'page', area: ROUTES_AREA, data: { path: '/wavebots' }, render: () => React.createElement(Page) },
