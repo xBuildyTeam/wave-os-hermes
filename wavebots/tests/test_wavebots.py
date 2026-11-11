@@ -381,7 +381,8 @@ def wave(env, monkeypatch, secret):
 def test_key_is_a_hermes_secret_not_stored_by_the_plugin(wave, secret, env):
     import inspect
     src = inspect.getsource(_connect)
-    assert "get_secret" in src and "keyring" not in src and "write_text" not in src and "os.open" not in src
+    assert "get_secret" in src and "keyring" not in src and "os.open" not in src
+    assert src.count("write_text") == 1 and "def _set_off" in src     # the only write: switched-off key fingerprints
     assert not _connect.status()["connected"] and _connect.status()["key_url"].startswith("https://app.oswave.io/hermes/connect")
     secret["v"] = JWT
     st = _connect.status()
@@ -454,3 +455,26 @@ def test_old_route_names_still_work(wave, secret):
     assert _connect.background_state()["connection"]["connected"] is False
     assert _connect.start_background()["url"].endswith("mode=key")
     assert _connect.cancel_background() is None
+
+
+def test_disconnect_switches_the_key_off_here_and_reconnect_turns_it_back_on(wave, secret):
+    from wavebots import _profile
+    secret["v"] = JWT
+    assert _connect.status()["connected"]
+    r = _connect.disconnect()
+    assert r["disconnected"] and "Settings" in r["note"]
+    st = _connect.status()
+    assert not st["connected"] and st["disconnected"]
+    saved = (_profile._state_dir() / "disconnected.json").read_text()
+    assert JWT not in saved and len(json.loads(saved)["fingerprints"][0]) == 16       # only a fingerprint
+    n = len(wave.calls)
+    with pytest.raises(_connect.ConnectError, match="disconnected"):
+        _connect.ask("checker", "q?")
+    assert len(wave.calls) == n                                                       # nothing sent
+    assert "verified" not in _connect.verify(force=True)
+    secret["v"] = JWT.replace("c2ln", "c2lm")                                         # a new key works right away
+    assert _connect.status()["connected"]
+    secret["v"] = JWT
+    assert _connect.reconnect()["connection"]["connected"]
+    assert not (_profile._state_dir() / "disconnected.json").exists()
+    assert "Reconnected" in wavebots._slash("reconnect")

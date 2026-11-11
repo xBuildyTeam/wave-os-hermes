@@ -183,6 +183,11 @@ def disconnect():
     return _m("_connect").disconnect()
 
 
+@router.post("/reconnect")
+def reconnect():
+    return _m("_connect").reconnect()
+
+
 class AskIn(BaseModel):
     bot: str = Field(min_length=1, max_length=120)
     question: str = Field(min_length=1, max_length=8000)

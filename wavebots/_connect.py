@@ -25,10 +25,34 @@ ENV = "WAVE_OS_TOKEN"
 KEY_URL = WAVE_OS + "/hermes/connect?mode=key"
 SETTINGS_HINT = "Hermes Settings › Plugins › wavebots › Wave OS bot key"
 CLI_HINT = "hermes config set WAVE_OS_TOKEN <key>"
-_UA = {"user-agent": "wave-bots-hermes/0.3.4", "accept": "application/json"}
+_UA = {"user-agent": "wave-bots-hermes/0.3.5", "accept": "application/json"}
 
 # Fingerprints of keys Wave OS refused in this process, so we stop sending them. Memory only.
 _refused: set = set()
+
+REVOKE_URL = WAVE_OS
+DISCONNECTED_FILE = "disconnected.json"   # a list of 16-hex key fingerprints, never the key
+
+
+def _off_path():
+    from . import _profile
+    return _profile._state_dir() / DISCONNECTED_FILE
+
+
+def _off() -> set:
+    try:
+        v = json.loads(_off_path().read_text(encoding="utf-8"))
+        return {x for x in v.get("fingerprints", []) if isinstance(x, str) and len(x) == 16}
+    except Exception:
+        return set()
+
+
+def _set_off(fps: set) -> None:
+    p = _off_path()
+    if fps:
+        p.write_text(json.dumps({"fingerprints": sorted(fps)[-20:]}), encoding="utf-8")
+    elif p.exists():
+        p.unlink()
 
 
 class ConnectError(Exception):
@@ -75,13 +99,16 @@ def _looks_ok(tok: str) -> bool:
 
 
 def status() -> dict:
+    base = {"key_url": KEY_URL, "settings": SETTINGS_HINT, "cli": CLI_HINT, "revoke_url": REVOKE_URL}
     tok = _secret()
     if not tok:
-        return {"connected": False, "key_set": False, "key_url": KEY_URL, "settings": SETTINGS_HINT, "cli": CLI_HINT}
+        return {"connected": False, "key_set": False, **base}
+    fp = _fp(tok)
     bad = not _looks_ok(tok)
-    refused = _fp(tok) in _refused
-    return {"connected": not bad and not refused, "key_set": True, "malformed": bad, "revoked": refused,
-            "key_url": KEY_URL, "settings": SETTINGS_HINT, "cli": CLI_HINT}
+    refused = fp in _refused
+    off = fp in _off()
+    return {"connected": not bad and not refused and not off, "key_set": True, "malformed": bad,
+            "revoked": refused, "disconnected": off, **base}
 
 
 _checked: dict = {}   # key fingerprint -> {"ok": bool, "error": str, "at": float}. Memory only.
@@ -120,10 +147,27 @@ def connect_info() -> dict:
 
 
 def disconnect() -> dict:
-    _refused.clear()
+    """Stop using the current key on this computer right away. Hermes keeps the key itself; this only
+    remembers its fingerprint as switched off. Clear it in Hermes settings and revoke it on Wave OS to
+    remove it completely."""
     _checked.clear()
-    return {"ok": True, "note": f"To disconnect, clear the Wave OS bot key in {SETTINGS_HINT}. "
-                                "To cancel it on Wave's side too, revoke it in Wave OS Settings › MCP Setup."}
+    tok = _secret()
+    if tok:
+        _set_off(_off() | {_fp(tok)})
+    return {"ok": True, "disconnected": bool(tok),
+            "note": ("Disconnected: Hermes won't use this Wave OS key anymore. " if tok else "No Wave OS key is set. ")
+                    + f"To remove the key, clear it in {SETTINGS_HINT}. To cancel it on Wave's side, revoke it in "
+                    "Wave OS Settings › MCP Setup."}
+
+
+def reconnect() -> dict:
+    """Use the current key again after Disconnect."""
+    tok = _secret()
+    if tok:
+        _set_off(_off() - {_fp(tok)})
+    _refused.discard(_fp(tok)) if tok else None
+    _checked.clear()
+    return {"ok": True, "connection": status()}
 
 
 # ----------------------------------------------------------------------------- ask --
@@ -131,6 +175,8 @@ def _mcp(tool: str, args: dict, *, timeout: float = 120.0) -> dict:
     tok = _secret()
     if not tok:
         raise ConnectError(f"Connect Wave OS first: get a key at {KEY_URL} and paste it in {SETTINGS_HINT}.")
+    if _fp(tok) in _off():
+        raise ConnectError("Wave OS is disconnected on this computer. Reconnect on the Wave | Bots Connection tab.")
     if not _looks_ok(tok):
         raise ConnectError(f"The Wave OS bot key in {SETTINGS_HINT} doesn't look right. Paste it again.")
     if _fp(tok) in _refused:

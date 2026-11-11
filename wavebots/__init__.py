@@ -125,7 +125,8 @@ HELP = """Wave | Bots, verified bots from bots.theta:
   /bots remove <bot> yes   delete an added bot and its chat
   /bots connect            how to connect Wave OS (get a key on app.oswave.io, paste it in Hermes)
   /bots ask <bot> <question>   ask the real bot on Wave (free bots only)
-  /bots disconnect         how to disconnect Wave OS"""
+  /bots disconnect         stop using the Wave OS key here
+  /bots reconnect          use it again"""
 
 
 def _fmt_answer(r: dict) -> str:
@@ -197,6 +198,9 @@ def _slash(raw_args: str, **_ctx) -> str:
                     "click Create key, copy it), 2) paste it in " + i["settings"] + ", or run: " + i["cli"] + ".")
         if cmd == "disconnect":
             return W.disconnect()["note"]
+        if cmd == "reconnect":
+            st = W.reconnect()["connection"]
+            return "Reconnected to Wave OS." if st.get("connected") else "No usable Wave OS key is set. Use /bots connect."
         if cmd == "ask":
             if len(rest) < 2:
                 return "Use: /bots ask <bot> <question>"
@@ -220,7 +224,8 @@ def _setup_cli(parser) -> None:
         if name == "remove":
             p.add_argument("--yes", action="store_true")
     sub.add_parser("connect", help="How to connect Wave OS (get a key on app.oswave.io)")
-    sub.add_parser("disconnect", help="How to disconnect Wave OS")
+    sub.add_parser("disconnect", help="Stop using the Wave OS key here")
+    sub.add_parser("reconnect", help="Use the Wave OS key again")
     sub.add_parser("status", help="Is Wave OS connected?")
     pa = sub.add_parser("ask", help="Ask the real bot on Wave")
     pa.add_argument("bot")
@@ -245,6 +250,8 @@ def _handle_cli(args) -> None:
             return
         if act == "disconnect":
             print(W.disconnect()["note"])
+        if act == "reconnect":
+            print("Reconnected to Wave OS." if W.reconnect()["connection"].get("connected") else "No usable Wave OS key is set.")
             return
         if act == "ask":
             print(_fmt_answer(W.ask(args.bot, " ".join(args.question))))
