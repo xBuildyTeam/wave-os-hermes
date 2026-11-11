@@ -316,7 +316,7 @@ function createWaveBots(env) {
     useEffect(function () { loadConn(); }, [loadConn]);
     function connect() {
       setTab("connect"); setOpenQ(null);
-      call("/connect/start", {}).then(function (r) { open(r.url); }, fail);
+      open("https://app.oswave.io/hermes/connect?mode=key");   // no backend call needed
     }
     function openSettings() { go("/settings?tab=plugins&agent=wavebots"); }
     function disconnect() { call("/disconnect", {}).then(function (r) { setToast(r.note); loadConn(); }, fail); }
