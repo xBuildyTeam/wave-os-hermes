@@ -447,3 +447,10 @@ def test_verify_confirms_the_key_with_wave_os_and_caches(wave, secret):
     wave.revoked = True
     v = _connect.verify(force=True)
     assert v["verified"] is False and not v["connected"] and v["revoked"]
+
+
+def test_old_route_names_still_work(wave, secret):
+    # an older plugin_api.py kept in memory by a long-running gateway calls these
+    assert _connect.background_state()["connection"]["connected"] is False
+    assert _connect.start_background()["url"].endswith("mode=key")
+    assert _connect.cancel_background() is None

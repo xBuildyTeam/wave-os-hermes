@@ -25,7 +25,7 @@ ENV = "WAVE_OS_TOKEN"
 KEY_URL = WAVE_OS + "/hermes/connect?mode=key"
 SETTINGS_HINT = "Hermes Settings › Plugins › wavebots › Wave OS bot key"
 CLI_HINT = "hermes config set WAVE_OS_TOKEN <key>"
-_UA = {"user-agent": "wave-bots-hermes/0.3.3", "accept": "application/json"}
+_UA = {"user-agent": "wave-bots-hermes/0.3.4", "accept": "application/json"}
 
 # Fingerprints of keys Wave OS refused in this process, so we stop sending them. Memory only.
 _refused: set = set()
@@ -168,3 +168,23 @@ def ask(bot: str, question: str, *, max_price_tfuel: float = 0.0, conversation_i
     out = {k: r.get(k) for k in keep if k in r}
     out["untrusted"] = True
     return out
+
+
+# ----------------------------------------------------------------------------- 0.2.x names --
+# A long-running Hermes gateway can keep an older dashboard/plugin_api.py in memory after an update
+# while this module is reloaded from disk. These keep that older route code working (no storage).
+def background_state() -> dict:
+    return {"state": "idle", "connection": status()}
+
+
+def start_background(open_url=None) -> dict:
+    if open_url:
+        try:
+            open_url(KEY_URL)
+        except Exception:
+            pass
+    return {"state": "idle", "url": KEY_URL}
+
+
+def cancel_background() -> None:
+    return None
