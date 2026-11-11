@@ -273,7 +273,7 @@ function createWaveBots(env) {
 
   function Connection(p) {
     var c = p.state || {}, conn = c.connection || {};
-    var settings = conn.settings || "Hermes Settings › Plugins › Wave | Bots › Wave OS bot key";
+    var settings = conn.settings || "Hermes Settings › Plugins › wavebots › Wave OS bot key";
     var cli = conn.cli || "hermes config set WAVE_OS_TOKEN <key>";
     var body;
     if (conn.connected) body = h(React.Fragment, null,
@@ -318,7 +318,7 @@ function createWaveBots(env) {
       setTab("connect"); setOpenQ(null);
       call("/connect/start", {}).then(function (r) { open(r.url); }, fail);
     }
-    function openSettings() { go("/settings?tab=plugins&plugin=wavebots"); }
+    function openSettings() { go("/settings?tab=plugins&agent=wavebots"); }
     function disconnect() { call("/disconnect", {}).then(function (r) { setToast(r.note); loadConn(); }, fail); }
     var connected = !!(conn && conn.connection && conn.connection.connected);
     var ps = useState(null), plugins = ps[0], setPlugins = ps[1];

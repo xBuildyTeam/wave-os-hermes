@@ -3,7 +3,7 @@
   "label": "Wave | Bots",
   "description": "Wave | Bots: verified bots from the bots.theta store, checked on Theta on your computer. Add one to Hermes as its own bot.",
   "icon": "Bot",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "tab": {
     "path": "/wavebots",
     "position": "after:skills"
